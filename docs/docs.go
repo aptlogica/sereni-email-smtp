@@ -328,15 +328,11 @@ const docTemplate = `{
         "email.OTPRequest": {
             "type": "object",
             "required": [
-                "otp",
                 "to"
             ],
             "properties": {
                 "expiry": {
                     "type": "integer"
-                },
-                "otp": {
-                    "type": "string"
                 },
                 "to": {
                     "type": "string"
