@@ -4,6 +4,7 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/smtp"
 	"strings"
 	"sync"
@@ -19,6 +20,12 @@ type EmailService struct {
 	otpStore      map[string]OTPEntry
 	mutex         sync.RWMutex
 	BulkBatchSize int
+	// SendEmailFunc, if set, will be used instead of the real SMTP send flow.
+	SendEmailFunc func(to []string, subject, body string, isHTML bool) error
+	// SendBulkEmailFunc allows overriding bulk send behavior in tests.
+	SendBulkEmailFunc func(recipients []string, subject, body string, isHTML bool) ([]string, error)
+	// Dial allows injecting a dialer for smtp clients (used in tests).
+	Dial func(addr string) (smtpClient, error)
 }
 
 type OTPEntry struct {
@@ -39,6 +46,11 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 		BulkBatchSize: batchSize,
 	}
 
+	// Default Dial uses smtp.Dial
+	service.Dial = func(addr string) (smtpClient, error) {
+		return smtp.Dial(addr)
+	}
+
 	// Start cleanup goroutine for expired OTPs
 	go service.cleanupExpiredOTPs()
 
@@ -46,6 +58,10 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 }
 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
+	// If a SendEmailFunc is provided (tests), use it
+	if es.SendEmailFunc != nil {
+		return es.SendEmailFunc(to, subject, body, isHTML)
+	}
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
 	// Set up the message
@@ -69,7 +85,8 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	}
 
 	// Connect to server
-	conn, err := smtp.Dial(fmt.Sprintf("%s:%d", es.SMTPHost, es.SMTPPort))
+	// Use injected Dial for testability
+	conn, err := es.Dial(fmt.Sprintf("%s:%d", es.SMTPHost, es.SMTPPort))
 	if err != nil {
 		return err
 	}
@@ -114,7 +131,21 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	return conn.Quit()
 }
 
+// smtpClient abstracts the subset of smtp.Client used by SendEmail
+type smtpClient interface {
+	StartTLS(config *tls.Config) error
+	Auth(a smtp.Auth) error
+	Mail(from string) error
+	Rcpt(to string) error
+	Data() (io.WriteCloser, error)
+	Close() error
+	Quit() error
+}
+
 func (es *EmailService) SendBulkEmail(recipients []string, subject, body string, isHTML bool) ([]string, error) {
+	if es.SendBulkEmailFunc != nil {
+		return es.SendBulkEmailFunc(recipients, subject, body, isHTML)
+	}
 	var failedEmails []string
 	var wg sync.WaitGroup
 	var mu sync.Mutex
