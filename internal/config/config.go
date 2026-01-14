@@ -9,13 +9,14 @@ import (
 )
 
 type Config struct {
-	Port         string
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUsername string
-	SMTPPassword string
-	FromEmail    string
-	RedisURL     string
+	Port          string
+	SMTPHost      string
+	SMTPPort      int
+	SMTPUsername  string
+	SMTPPassword  string
+	FromEmail     string
+	RedisURL      string
+	BulkBatchSize int
 }
 
 func LoadConfig() *Config {
@@ -25,13 +26,14 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		Port:         getEnv("PORT", "8080"),
-		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
-		SMTPUsername: getEnv("SMTP_USERNAME", ""),
-		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		FromEmail:    getEnv("FROM_EMAIL", ""),
-		RedisURL:     getEnv("REDIS_URL", ""),
+		Port:          getEnv("PORT", "8080"),
+		SMTPHost:      getEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:      getEnvAsInt("SMTP_PORT", 587),
+		SMTPUsername:  getEnv("SMTP_USERNAME", ""),
+		SMTPPassword:  getEnv("SMTP_PASSWORD", ""),
+		FromEmail:     getEnv("FROM_EMAIL", ""),
+		RedisURL:      getEnv("REDIS_URL", ""),
+		BulkBatchSize: getEnvAsInt("BULK_BATCH_SIZE", 10),
 	}
 }
 

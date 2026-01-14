@@ -6,6 +6,7 @@ import (
 	"email-service/internal/config"
 	"email-service/internal/email"
 	"email-service/internal/handlers"
+	"email-service/pkg/middleware"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -37,6 +38,7 @@ func main() {
 		cfg.SMTPUsername,
 		cfg.SMTPPassword,
 		cfg.FromEmail,
+		cfg.BulkBatchSize,
 	)
 
 	// Initialize handlers
@@ -46,7 +48,7 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	r.Use(corsMiddleware())
+	r.Use(middleware.CORSMiddleware())
 
 	// Health check endpoint
 	r.GET("/health", emailHandler.HealthCheck)
@@ -65,20 +67,4 @@ func main() {
 
 	log.Printf("Email microservice starting on port %s", cfg.Port)
 	log.Fatal(r.Run(":" + cfg.Port))
-}
-
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
 }

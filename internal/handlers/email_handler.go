@@ -114,19 +114,12 @@ func (h *EmailHandler) GenerateOTP(c *gin.Context) {
 		expiry = 5
 	}
 
-	otp, err := h.Service.GenerateAndSendOTP(req.To, expiry)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"success": false,
-			"message": "Failed to generate OTP: " + err.Error(),
-		})
-		return
-	}
+	// Generate OTP and store, but send email asynchronously
+	go h.Service.GenerateAndSendOTP(req.To, expiry)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "OTP sent successfully",
-		"otp":     otp, // In production, don't return OTP in response
 	})
 }
 

@@ -4,19 +4,28 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net/smtp"
+	"strings"
 	"sync"
 	"time"
 )
 
 type EmailService struct {
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUsername string
-	SMTPPassword string
-	FromEmail    string
-	otpStore     map[string]OTPEntry
-	mutex        sync.RWMutex
+	SMTPHost      string
+	SMTPPort      int
+	SMTPUsername  string
+	SMTPPassword  string
+	FromEmail     string
+	otpStore      map[string]OTPEntry
+	mutex         sync.RWMutex
+	BulkBatchSize int
+	// SendEmailFunc, if set, will be used instead of the real SMTP send flow.
+	SendEmailFunc func(to []string, subject, body string, isHTML bool) error
+	// SendBulkEmailFunc allows overriding bulk send behavior in tests.
+	SendBulkEmailFunc func(recipients []string, subject, body string, isHTML bool) ([]string, error)
+	// Dial allows injecting a dialer for smtp clients (used in tests).
+	Dial func(addr string) (smtpClient, error)
 }
 
 type OTPEntry struct {
@@ -26,14 +35,20 @@ type OTPEntry struct {
 	Expiry  time.Time
 }
 
-func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, fromEmail string) *EmailService {
+func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, fromEmail string, batchSize int) *EmailService {
 	service := &EmailService{
-		SMTPHost:     smtpHost,
-		SMTPPort:     smtpPort,
-		SMTPUsername: smtpUsername,
-		SMTPPassword: smtpPassword,
-		FromEmail:    fromEmail,
-		otpStore:     make(map[string]OTPEntry),
+		SMTPHost:      smtpHost,
+		SMTPPort:      smtpPort,
+		SMTPUsername:  smtpUsername,
+		SMTPPassword:  smtpPassword,
+		FromEmail:     fromEmail,
+		otpStore:      make(map[string]OTPEntry),
+		BulkBatchSize: batchSize,
+	}
+
+	// Default Dial uses smtp.Dial
+	service.Dial = func(addr string) (smtpClient, error) {
+		return smtp.Dial(addr)
 	}
 
 	// Start cleanup goroutine for expired OTPs
@@ -43,6 +58,10 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 }
 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
+	// If a SendEmailFunc is provided (tests), use it
+	if es.SendEmailFunc != nil {
+		return es.SendEmailFunc(to, subject, body, isHTML)
+	}
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
 	// Set up the message
@@ -65,10 +84,9 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 		)
 	}
 
-	fmt.Println("Email message:", message) // Debugging line
-
 	// Connect to server
-	conn, err := smtp.Dial(fmt.Sprintf("%s:%d", es.SMTPHost, es.SMTPPort))
+	// Use injected Dial for testability
+	conn, err := es.Dial(fmt.Sprintf("%s:%d", es.SMTPHost, es.SMTPPort))
 	if err != nil {
 		return err
 	}
@@ -78,8 +96,6 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	if err = conn.StartTLS(&tls.Config{ServerName: es.SMTPHost}); err != nil {
 		return err
 	}
-
-	fmt.Println("Auth object:", auth) // Debugging line
 
 	// Authenticate
 	if err = conn.Auth(auth); err != nil {
@@ -115,15 +131,36 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	return conn.Quit()
 }
 
+// smtpClient abstracts the subset of smtp.Client used by SendEmail
+type smtpClient interface {
+	StartTLS(config *tls.Config) error
+	Auth(a smtp.Auth) error
+	Mail(from string) error
+	Rcpt(to string) error
+	Data() (io.WriteCloser, error)
+	Close() error
+	Quit() error
+}
+
 func (es *EmailService) SendBulkEmail(recipients []string, subject, body string, isHTML bool) ([]string, error) {
+	if es.SendBulkEmailFunc != nil {
+		return es.SendBulkEmailFunc(recipients, subject, body, isHTML)
+	}
 	var failedEmails []string
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 
-	batchSize := 10 // Limit concurrent connections
+	batchSize := es.BulkBatchSize
+	if batchSize <= 0 {
+		batchSize = 10
+	}
 	semaphore := make(chan struct{}, batchSize)
 
 	for _, recipient := range recipients {
+		if !IsValidEmail(recipient) {
+			failedEmails = append(failedEmails, recipient)
+			continue
+		}
 		wg.Add(1)
 		go func(email string) {
 			defer wg.Done()
@@ -145,7 +182,7 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 
 func (es *EmailService) GenerateAndSendOTP(to string, expiryMinutes int) (string, error) {
 	// Generate random OTP
-	otp := es.generateOTP()
+	otp := GenerateOTP()
 
 	// Create OTP entry
 	expiryTime := time.Now().Add(time.Duration(expiryMinutes) * time.Minute)
@@ -176,17 +213,14 @@ func (es *EmailService) GenerateAndSendOTP(to string, expiryMinutes int) (string
 }
 
 func (es *EmailService) VerifyOTP(email, otp string) bool {
-	es.mutex.RLock()
-	defer es.mutex.RUnlock()
-
 	key := fmt.Sprintf("%s:%s", email, otp)
-	entry, exists := es.otpStore[key]
+	es.mutex.Lock()
+	defer es.mutex.Unlock()
 
+	entry, exists := es.otpStore[key]
 	if !exists || time.Now().After(entry.Expiry) {
 		return false
 	}
-
-	// Delete OTP after verification
 	delete(es.otpStore, key)
 	return true
 }
@@ -197,6 +231,9 @@ func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
 	body := request.Body
 
 	if request.Template != "" {
+		if !IsValidEmailList(request.To) {
+			return fmt.Errorf("invalid recipient email(s)")
+		}
 		renderedSubject, renderedBody, err := es.RenderTemplate(request.Template, request.TemplateData)
 		if err != nil {
 			return fmt.Errorf("failed to render template: %w", err)
@@ -206,12 +243,6 @@ func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
 	}
 
 	return es.SendEmail(request.To, subject, body, request.IsHTML)
-}
-
-func (es *EmailService) generateOTP() string {
-	// Generate 6-digit numeric OTP
-	// In production, use crypto/rand for better security
-	return fmt.Sprintf("%06d", time.Now().Unix()%1000000)
 }
 
 func (es *EmailService) cleanupExpiredOTPs() {
@@ -230,15 +261,5 @@ func (es *EmailService) cleanupExpiredOTPs() {
 }
 
 func join(elements []string, sep string) string {
-	if len(elements) == 0 {
-		return ""
-	}
-	if len(elements) == 1 {
-		return elements[0]
-	}
-	result := elements[0]
-	for _, element := range elements[1:] {
-		result += sep + element
-	}
-	return result
+	return strings.Join(elements, sep)
 }

@@ -21,7 +21,6 @@ type BulkEmailRequest struct {
 
 type OTPRequest struct {
 	To     string `json:"to" binding:"required"`
-	OTP    string `json:"otp" binding:"required"`
 	Expiry int    `json:"expiry"`
 }
 

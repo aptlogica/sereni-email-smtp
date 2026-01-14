@@ -58,12 +58,9 @@ definitions:
     properties:
       expiry:
         type: integer
-      otp:
-        type: string
       to:
         type: string
     required:
-    - otp
     - to
     type: object
   email.OTPVerificationRequest:
