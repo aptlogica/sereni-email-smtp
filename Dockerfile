@@ -1,22 +1,20 @@
 # docker/Dockerfile
-FROM golang:1.23-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install git (required for go modules)
 RUN apk add --no-cache git
 
 WORKDIR /app
 
-# Copy go mod files
-COPY go.mod go.sum ./
-
-# Download dependencies
+# Copy service module files first for dependency caching
+COPY services/email/go.mod services/email/go.sum ./
 RUN go mod download
 
-# Copy source code
-COPY . .
+# Copy the service source code
+COPY services/email/ ./
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o email-service cmd/server/main.go
+# Build the application binary from the service module
+RUN CGO_ENABLED=0 GOOS=linux go build -o email-service ./cmd/server
 
 # Final stage
 FROM alpine:latest
