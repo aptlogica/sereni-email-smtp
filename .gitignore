@@ -16,8 +16,3 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Test files
-*_test.go
-
-# Report
-report.md

@@ -25,7 +25,7 @@ type EmailService struct {
 	// SendBulkEmailFunc allows overriding bulk send behavior in tests.
 	SendBulkEmailFunc func(recipients []string, subject, body string, isHTML bool) ([]string, error)
 	// Dial allows injecting a dialer for smtp clients (used in tests).
-	Dial func(addr string) (smtpClient, error)
+	Dial func(addr string) (SmtpClient, error)
 }
 
 type OTPEntry struct {
@@ -47,7 +47,7 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 	}
 
 	// Default Dial uses smtp.Dial
-	service.Dial = func(addr string) (smtpClient, error) {
+	service.Dial = func(addr string) (SmtpClient, error) {
 		return smtp.Dial(addr)
 	}
 
@@ -70,7 +70,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
 			es.FromEmail,
-			join(to, ", "),
+			Join(to, ", "),
 			subject,
 			body,
 		)
@@ -78,7 +78,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
 			es.FromEmail,
-			join(to, ", "),
+			Join(to, ", "),
 			subject,
 			body,
 		)
@@ -131,8 +131,8 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	return conn.Quit()
 }
 
-// smtpClient abstracts the subset of smtp.Client used by SendEmail
-type smtpClient interface {
+// SmtpClient abstracts the subset of smtp.Client used by SendEmail
+type SmtpClient interface {
 	StartTLS(config *tls.Config) error
 	Auth(a smtp.Auth) error
 	Mail(from string) error
@@ -260,6 +260,6 @@ func (es *EmailService) cleanupExpiredOTPs() {
 	}
 }
 
-func join(elements []string, sep string) string {
+func Join(elements []string, sep string) string {
 	return strings.Join(elements, sep)
 }
