@@ -1,6 +1,6 @@
 module email-service
 
-go 1.25.1
+go 1.24
 
 require github.com/gin-gonic/gin v1.11.0
 
