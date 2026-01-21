@@ -27,6 +27,9 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/email-service .
 
+# Copy .env file
+COPY services/email/.env .
+
 # Expose port
 EXPOSE 8080
 
