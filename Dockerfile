@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Copy service module files first for dependency caching
 COPY services/email/go.mod services/email/go.sum ./
-RUN go mod download
+RUN go mod tidy && go mod download
 
 # Copy the service source code
 COPY services/email/ ./
