@@ -1,0 +1,53 @@
+# Ignore Go build output
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Ignore vendor directory
+vendor/
+
+# Ignore dependency directories
+Godeps/
+
+# Ignore IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Ignore environment files
+.env
+*.env
+
+# Ignore coverage and test output
+coverage.out
+*.coverprofile
+
+# Ignore logs
+*.log
+
+# Ignore Docker files
+Dockerfile*
+docker-compose*
+
+# Ignore node modules (if any)
+node_modules/
+
+# Ignore documentation build output
+docs/_build/
+
+# Ignore SonarQube files
+.sonar/
+
+# Ignore temporary files
+*.tmp
+*.bak
+*~
+
+# Ignore report files
+report.md
