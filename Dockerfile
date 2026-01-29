@@ -40,13 +40,13 @@ COPY --from=builder /app/swag .
 COPY docker/entrypoint.sh .
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8082
 
 # Make entrypoint executable
 RUN chmod +x entrypoint.sh
 
 # Set default env vars (can be overridden)
 ENV SWAGGER_HOST=localhost
-ENV SWAGGER_PORT=8080
+ENV SWAGGER_PORT=8082
 
 ENTRYPOINT ["./entrypoint.sh"]

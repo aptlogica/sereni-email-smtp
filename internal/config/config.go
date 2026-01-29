@@ -23,7 +23,7 @@ func LoadConfig() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		Port:          GetEnv("PORT", "8080"),
+		Port:          GetEnv("PORT", "8082"),
 		SMTPHost:      GetEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:      GetEnvAsInt("SMTP_PORT", 587),
 		SMTPUsername:  GetEnv("SMTP_USERNAME", ""),
