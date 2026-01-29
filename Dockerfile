@@ -37,7 +37,7 @@ COPY --from=builder /app/email-service .
 COPY --from=builder /app/swag .
 
 # Copy entrypoint script
-COPY docker/entrypoint.sh .
+COPY entrypoint.sh .
 
 # Expose port
 EXPOSE 8082
