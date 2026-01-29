@@ -1,5 +1,5 @@
 # docker/Dockerfile
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24.4-alpine AS builder
 
 # Install git (required for go modules)
 RUN apk add --no-cache git
