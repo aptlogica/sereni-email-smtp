@@ -1,6 +1,8 @@
 module email-service
 
-go 1.24.4
+go 1.24.0
+
+toolchain go1.24.6
 
 require (
 	github.com/gin-gonic/gin v1.11.0
