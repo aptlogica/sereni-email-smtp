@@ -9,13 +9,14 @@ import (
 )
 
 type Config struct {
-	Port         string
-	SMTPHost     string
-	SMTPPort     int
-	SMTPUsername string
-	SMTPPassword string
-	FromEmail    string
-	RedisURL     string
+	Port          string
+	SMTPHost      string
+	SMTPPort      int
+	SMTPUsername  string
+	SMTPPassword  string
+	FromEmail     string
+	RedisURL      string
+	BulkBatchSize int
 }
 
 func LoadConfig() *Config {
@@ -25,24 +26,25 @@ func LoadConfig() *Config {
 	}
 
 	return &Config{
-		Port:         getEnv("PORT", "8080"),
-		SMTPHost:     getEnv("SMTP_HOST", "smtp.gmail.com"),
-		SMTPPort:     getEnvAsInt("SMTP_PORT", 587),
-		SMTPUsername: getEnv("SMTP_USERNAME", ""),
-		SMTPPassword: getEnv("SMTP_PASSWORD", ""),
-		FromEmail:    getEnv("FROM_EMAIL", ""),
-		RedisURL:     getEnv("REDIS_URL", ""),
+		Port:          GetEnv("PORT", "8080"),
+		SMTPHost:      GetEnv("SMTP_HOST", "smtp.gmail.com"),
+		SMTPPort:      GetEnvAsInt("SMTP_PORT", 587),
+		SMTPUsername:  GetEnv("SMTP_USERNAME", ""),
+		SMTPPassword:  GetEnv("SMTP_PASSWORD", ""),
+		FromEmail:     GetEnv("FROM_EMAIL", ""),
+		RedisURL:      GetEnv("REDIS_URL", ""),
+		BulkBatchSize: GetEnvAsInt("BULK_BATCH_SIZE", 10),
 	}
 }
 
-func getEnv(key, defaultValue string) string {
+func GetEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value
 	}
 	return defaultValue
 }
 
-func getEnvAsInt(key string, defaultValue int) int {
+func GetEnvAsInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
 			return intValue

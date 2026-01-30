@@ -3,9 +3,10 @@ package email
 
 import (
 	"bytes"
+	"email-service/internal/templatecache"
 	"errors"
 	"fmt"
-	"html/template"
+	"sync"
 )
 
 // EmailTemplate represents a template for emails
@@ -20,6 +21,10 @@ type EmailTemplate struct {
 type TemplateData struct {
 	Data map[string]interface{}
 }
+
+// Mutex for synchronizing access to predefined templates
+var templateMu sync.RWMutex
+var tmplCache = templatecache.NewTemplateCache()
 
 // Predefined templates
 var predefinedTemplates = map[string]EmailTemplate{
@@ -108,48 +113,42 @@ var predefinedTemplates = map[string]EmailTemplate{
 
 // RenderTemplate renders a template with the provided data
 func (es *EmailService) RenderTemplate(templateName string, data map[string]interface{}) (string, string, error) {
+	templateMu.RLock()
 	template, exists := predefinedTemplates[templateName]
+	templateMu.RUnlock()
 	if !exists {
 		return "", "", errors.New("template not found: " + templateName)
 	}
 
-	// Process subject
-	subject, err := processTemplateString(template.Subject, data)
-	if err != nil {
-		return "", "", fmt.Errorf("error processing subject: %w", err)
+	// Get parsed HTML template from cache or parse and store
+	htmlTmpl, ok := tmplCache.Get(templateName + ":html")
+	if !ok {
+		var err error
+		htmlTmpl, err = templatecache.ParseAndCacheTemplate(tmplCache, templateName+":html", template.HTMLBody)
+		if err != nil {
+			return "", "", fmt.Errorf("error parsing HTML body: %w", err)
+		}
+	}
+	var htmlBuf bytes.Buffer
+	if err := htmlTmpl.Execute(&htmlBuf, data); err != nil {
+		return "", "", fmt.Errorf("error executing HTML body: %w", err)
 	}
 
-	// Process HTML body
-	htmlBody, err := processTemplateString(template.HTMLBody, data)
-	if err != nil {
-		return "", "", fmt.Errorf("error processing HTML body: %w", err)
+	// Get parsed subject template from cache or parse and store
+	subjTmpl, ok := tmplCache.Get(templateName + ":subject")
+	if !ok {
+		var err error
+		subjTmpl, err = templatecache.ParseAndCacheTemplate(tmplCache, templateName+":subject", template.Subject)
+		if err != nil {
+			return "", "", fmt.Errorf("error parsing subject: %w", err)
+		}
+	}
+	var subjBuf bytes.Buffer
+	if err := subjTmpl.Execute(&subjBuf, data); err != nil {
+		return "", "", fmt.Errorf("error executing subject: %w", err)
 	}
 
-	// Process text body
-	// textBody, err := processTemplateString(template.TextBody, data)
-	// if err != nil {
-	// 	return "", "", fmt.Errorf("error processing text body: %w", err)
-	// }
-
-	return subject, htmlBody, nil
-}
-
-// processTemplateString processes a template string with the provided data
-func processTemplateString(tmpl string, data map[string]interface{}) (string, error) {
-	// Create a new template
-	t, err := template.New("email").Parse(tmpl)
-	if err != nil {
-		return "", err
-	}
-
-	// Execute the template with the data
-	var buf bytes.Buffer
-	err = t.Execute(&buf, data)
-	if err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
+	return subjBuf.String(), htmlBuf.String(), nil
 }
 
 // AddTemplate adds a new template to the service
@@ -178,8 +177,10 @@ func (es *EmailService) SendTemplateEmail(to []string, templateName string, temp
 // GetAvailableTemplates returns a list of available template names
 func (es *EmailService) GetAvailableTemplates() []string {
 	var templates []string
+	templateMu.RLock()
 	for name := range predefinedTemplates {
 		templates = append(templates, name)
 	}
+	templateMu.RUnlock()
 	return templates
 }

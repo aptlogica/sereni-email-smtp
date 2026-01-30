@@ -24,3 +24,6 @@ test:
 
 clean:
 	rm -f bin/email-service
+
+swagger:
+	swag init -g cmd/server/main.go

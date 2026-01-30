@@ -1,0 +1,236 @@
+definitions:
+  email.BulkEmailRequest:
+    properties:
+      body:
+        type: string
+      is_html:
+        type: boolean
+      recipients:
+        items:
+          type: string
+        type: array
+      subject:
+        type: string
+      template:
+        type: string
+      template_data:
+        additionalProperties: true
+        type: object
+    required:
+    - body
+    - recipients
+    - subject
+    type: object
+  email.EmailRequest:
+    properties:
+      body:
+        type: string
+      is_html:
+        type: boolean
+      subject:
+        type: string
+      template:
+        type: string
+      template_data:
+        additionalProperties: true
+        type: object
+      to:
+        items:
+          type: string
+        type: array
+    required:
+    - body
+    - subject
+    - to
+    type: object
+  email.EmailResponse:
+    properties:
+      failed_emails:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  email.OTPRequest:
+    properties:
+      expiry:
+        type: integer
+      to:
+        type: string
+    required:
+    - to
+    type: object
+  email.OTPVerificationRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+host: localhost:8082
+info:
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for the Email Service
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Serenibase Email Service API
+  version: "1.0"
+paths:
+  /api/v1/email/otp/generate:
+    post:
+      consumes:
+      - application/json
+      description: Generate a One-Time Password and send it to the specified email
+      parameters:
+      - description: OTP Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/email.OTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Generate and send OTP
+      tags:
+      - otp
+  /api/v1/email/otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verify a One-Time Password for an email
+      parameters:
+      - description: OTP Verification Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/email.OTPVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verify OTP
+      tags:
+      - otp
+  /api/v1/email/send:
+    post:
+      consumes:
+      - application/json
+      description: Send a single email to a recipient
+      parameters:
+      - description: Email Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/email.EmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Send a transactional email
+      tags:
+      - email
+  /api/v1/email/send-bulk:
+    post:
+      consumes:
+      - application/json
+      description: Send emails to multiple recipients
+      parameters:
+      - description: Bulk Email Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/email.BulkEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/email.EmailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Send bulk emails
+      tags:
+      - email
+  /health:
+    get:
+      description: Check if the service is up and running
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health Check
+      tags:
+      - health
+swagger: "2.0"

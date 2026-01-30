@@ -2,13 +2,31 @@
 package main
 
 import (
+	_ "email-service/docs" // Import generated docs
 	"email-service/internal/config"
 	"email-service/internal/email"
 	"email-service/internal/handlers"
+	"email-service/pkg/middleware"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+// @title Serenibase Email Service API
+// @version 1.0
+// @description API for the Email Service
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8082
 
 func main() {
 	cfg := config.LoadConfig()
@@ -20,6 +38,7 @@ func main() {
 		cfg.SMTPUsername,
 		cfg.SMTPPassword,
 		cfg.FromEmail,
+		cfg.BulkBatchSize,
 	)
 
 	// Initialize handlers
@@ -29,10 +48,13 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	r.Use(corsMiddleware())
+	r.Use(middleware.CORSMiddleware())
 
 	// Health check endpoint
 	r.GET("/health", emailHandler.HealthCheck)
+
+	// Swagger endpoint
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Email endpoints
 	emailGroup := r.Group("/api/v1/email")
@@ -45,20 +67,4 @@ func main() {
 
 	log.Printf("Email microservice starting on port %s", cfg.Port)
 	log.Fatal(r.Run(":" + cfg.Port))
-}
-
-func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Credentials", "true")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With")
-		c.Header("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT")
-
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	}
 }
