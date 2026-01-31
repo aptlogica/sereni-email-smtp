@@ -1,9 +1,5 @@
-# Copy entrypoint script
-COPY entrypoint.sh .
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
-# docker/Dockerfile
+## docker/Dockerfile
 FROM golang:1.24.4-alpine AS builder
 
 # Install git (required for go modules)
@@ -41,6 +37,10 @@ WORKDIR /root/
 # Copy the binary from builder stage
 COPY --from=builder /app/email-service .
 COPY --from=builder /app/swag .
+
+# Copy entrypoint script and make it executable
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 
 # Expose port
