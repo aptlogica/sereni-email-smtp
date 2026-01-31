@@ -19,8 +19,12 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+
+
+
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o email-service cmd/server/main.go
+
 
 # Copy swag binary for later use
 RUN cp /go/bin/swag /app/swag
@@ -38,17 +42,12 @@ WORKDIR /root/
 COPY --from=builder /app/email-service .
 COPY --from=builder /app/swag .
 
-# Copy entrypoint script and make it executable
-COPY entrypoint.sh .
-RUN chmod +x entrypoint.sh
 
 
 # Expose port
 EXPOSE 8082
 
 
-# Set default env vars (can be overridden)
-ENV SWAGGER_HOST=localhost
-ENV SWAGGER_PORT=8082
 
-ENTRYPOINT ["./entrypoint.sh"]
+
+ENTRYPOINT ["./email-service"]
