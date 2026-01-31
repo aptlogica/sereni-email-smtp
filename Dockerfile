@@ -1,3 +1,8 @@
+# Copy entrypoint script
+COPY entrypoint.sh .
+
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
 # docker/Dockerfile
 FROM golang:1.24.4-alpine AS builder
 
@@ -24,6 +29,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o email-service cmd/server/main.go
 # Copy swag binary for later use
 RUN cp /go/bin/swag /app/swag
 
+
 # Final stage
 FROM alpine:3.20
 
@@ -36,14 +42,10 @@ WORKDIR /root/
 COPY --from=builder /app/email-service .
 COPY --from=builder /app/swag .
 
-# Copy entrypoint script
-COPY entrypoint.sh .
 
 # Expose port
 EXPOSE 8082
 
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
 
 # Set default env vars (can be overridden)
 ENV SWAGGER_HOST=localhost
