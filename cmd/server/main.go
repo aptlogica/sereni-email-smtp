@@ -26,7 +26,6 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-
 func main() {
 	cfg := config.LoadConfig()
 
@@ -47,7 +46,7 @@ func main() {
 	r := gin.Default()
 
 	// CORS middleware
-	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.CORSMiddleware(cfg.AllowedOrigin))
 
 	// Health check endpoint
 	r.GET("/health", emailHandler.HealthCheck)
@@ -64,6 +63,7 @@ func main() {
 		emailGroup.POST("/otp/verify", emailHandler.VerifyOTP)
 	}
 
-	log.Printf("Email microservice starting on port %s", cfg.Port)
-	log.Fatal(r.Run(":" + cfg.Port))
+	addr := cfg.Host + ":" + cfg.Port
+	log.Printf("Email microservice starting on %s", addr)
+	log.Fatal(r.Run(addr))
 }
