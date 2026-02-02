@@ -20,10 +20,8 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		panic("Error loading .env file")
-	}
+	// Load .env file if it exists (optional for Docker deployments)
+	_ = godotenv.Load()
 
 	return &Config{
 		Port:          GetEnv("PORT", "8080"),
