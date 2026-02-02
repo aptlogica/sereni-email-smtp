@@ -14,7 +14,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 
 # Download dependencies
-RUN go mod download
+RUN go mod tidy && go mod download
 
 # Copy source code
 COPY . .
@@ -23,7 +23,7 @@ COPY . .
 
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o email-service cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o email-service ./cmd/server
 
 
 # Copy swag binary for later use
@@ -44,8 +44,8 @@ COPY --from=builder /app/swag .
 
 
 
-# Expose port
-EXPOSE 8082
+# # Expose port
+# EXPOSE 8080
 
 
 

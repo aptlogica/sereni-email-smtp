@@ -22,6 +22,7 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
+	// Load .env file if it exists (optional for Docker deployments)
 	_ = godotenv.Load()
 
 	return &Config{
