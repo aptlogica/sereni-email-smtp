@@ -9,7 +9,9 @@ import (
 )
 
 type Config struct {
+	Host          string
 	Port          string
+	AllowedOrigin string
 	SMTPHost      string
 	SMTPPort      int
 	SMTPUsername  string
@@ -24,7 +26,9 @@ func LoadConfig() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
-		Port:          GetEnv("PORT", "8080"),
+		Host:          GetEnv("HOST", "0.0.0.0"),
+		Port:          GetEnv("PORT", "8082"),
+		AllowedOrigin: GetEnv("ALLOWED_ORIGIN", "*"),
 		SMTPHost:      GetEnv("SMTP_HOST", "smtp.gmail.com"),
 		SMTPPort:      GetEnvAsInt("SMTP_PORT", 587),
 		SMTPUsername:  GetEnv("SMTP_USERNAME", ""),
