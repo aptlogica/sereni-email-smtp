@@ -140,7 +140,7 @@ Replace outdated email systems with a modern REST API without rewriting your ent
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/yourusername/sereni-email-smtp.git
+git clone https://github.com/aptlogica/sereni-email-smtp.git
 cd sereni-email-smtp
 
 # 2. Create environment file
@@ -170,7 +170,7 @@ Easiest way to get started. Great for development and production deployment.
 
 ```bash
 # Step 1: Clone the repository
-git clone https://github.com/yourusername/sereni-email-smtp.git
+git clone https://github.com/aptlogica/sereni-email-smtp.git
 cd sereni-email-smtp
 
 # Step 2: Create environment configuration
@@ -229,7 +229,7 @@ For development, testing, or when you want to modify the code.
 go version
 
 # Step 2: Clone repository
-git clone https://github.com/yourusername/sereni-email-smtp.git
+git clone https://github.com/aptlogica/sereni-email-smtp.git
 cd sereni-email-smtp
 
 # Step 3: Install dependencies
@@ -1397,7 +1397,7 @@ end
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/sereni-email-smtp.git
+git clone https://github.com/aptlogica/sereni-email-smtp.git
 cd sereni-email-smtp
 
 # 2. Install Go 1.24.4+ (if not installed)
@@ -1895,19 +1895,4 @@ docker-compose down
 
 ---
 
-## Quick Integration Checklist
 
-- [ ] Service deployed and running (`docker-compose up -d`)
-- [ ] Health check passing (`curl http://localhost:8082/health`)
-- [ ] SMTP credentials configured in `.env`
-- [ ] Test email sent successfully
-- [ ] API client configured in your application
-- [ ] Error handling implemented
-- [ ] OTP generation tested (if using authentication)
-- [ ] Bulk email tested (if sending campaigns)
-- [ ] Monitoring/logging configured
-- [ ] Production deployment plan created
-
----
-
-**Ready for production? Deploy with confidence!** 🚀
