@@ -46,7 +46,7 @@ func TestGetEnvAsInt(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_PanicsAndLoads(t *testing.T) {
+func TestLoadConfig_LoadsDefaults(t *testing.T) {
 	// Use temp dir to control .env presence
 	tmpDir, err := ioutil.TempDir("", "cfgtest")
 	if err != nil {
@@ -58,26 +58,18 @@ func TestLoadConfig_PanicsAndLoads(t *testing.T) {
 	defer os.Chdir(oldwd)
 	os.Chdir(tmpDir)
 
-	// Without .env LoadConfig should panic (godotenv.Load returns error)
-	panicked := false
-	func() {
-		defer func() {
-			if r := recover(); r != nil {
-				panicked = true
-			}
-		}()
-		_ = config.LoadConfig()
-	}()
-	if !panicked {
-		t.Fatalf("expected panic when .env missing")
+	// Without .env LoadConfig should use defaults (LoadConfig doesn't panic)
+	cfg := config.LoadConfig()
+	if cfg.Host != "0.0.0.0" || cfg.Port != "8082" || cfg.SMTPHost != "smtp.gmail.com" {
+		t.Fatalf("defaults not working: %+v", cfg)
 	}
 
-	// Write a .env and expect success
+	// Write a .env and expect it to override defaults
 	env := "PORT=9090\nSMTP_HOST=example.com\nSMTP_PORT=2525\nBULK_BATCH_SIZE=20\n"
 	if err := ioutil.WriteFile(filepath.Join(tmpDir, ".env"), []byte(env), 0644); err != nil {
 		t.Fatalf("write .env failed: %v", err)
 	}
-	cfg := config.LoadConfig()
+	cfg = config.LoadConfig()
 	if cfg.Port != "9090" || cfg.SMTPHost != "example.com" || cfg.SMTPPort != 2525 || cfg.BulkBatchSize != 20 {
 		t.Fatalf("unexpected cfg values: %+v", cfg)
 	}
