@@ -1,4 +1,4 @@
-module email-service
+module github.com/aptlogica/sereni-email-smtp
 
 go 1.24.4
 

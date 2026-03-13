@@ -1,17 +1,29 @@
-# Binaries
-/bin/
-*.exe
-*.test
-main
-
-# Environment Variables
-.env
-
-# OS specific
+# OS
 .DS_Store
 Thumbs.db
-
-# IDEs
+# IDE
 .vscode/
 .idea/
+# Env
+.env
+.env.local
+.env.*.local
+# Logs
+*.log
+# Coverage
+coverage.out
+coverage/
+*.lcov
+# Build
+bin/
+dist/
+build/
+out/
+*.exe
+*.test
+*.tgz
+# Node
+node_modules/
+# Go
+vendor/
 
