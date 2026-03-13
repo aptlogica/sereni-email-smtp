@@ -1,20 +1,81 @@
 name: CI
+
 on:
   push:
     branches: [main, develop]
   pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+  pull-requests: read
+  checks: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
-      - run: go mod tidy
-      - run: go vet ./...
-      - run: go test ./... -coverprofile=coverage.out
-      - uses: golangci/golangci-lint-action@v6
+          go-version: '1.23'
+          
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+            
+      - name: Install dependencies
+        run: go mod tidy
+        
+      - name: Run go vet
+        run: go vet ./...
+        
+      - name: Run tests with coverage
+        run: go test ./... -coverprofile=coverage.out -race
+        
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage.out
+          fail_ci_if_error: false
+        
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-      - run: docker build .
+          
+      - name: Build binary
+        run: go build -o bin/sereni-email-smtp ./cmd/server
+        
+      - name: Docker build test
+        run: docker build -t sereni-email-smtp:test .
+        
+      - name: Test Docker image
+        run: |
+          docker run --rm -d --name smtp-test -p 8080:8080 sereni-email-smtp:test
+          sleep 5
+          docker logs smtp-test
+          docker stop smtp-test
