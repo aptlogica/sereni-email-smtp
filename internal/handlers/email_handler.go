@@ -6,7 +6,7 @@
 package handlers
 
 import (
-	"email-service/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"fmt"
 	"net/http"
 

@@ -9,7 +9,7 @@
 
 ## Overview
 
-**sereni-email-smtp** is a production-ready SMTP email provider and email microservice engineered for reliability, security, and observability in enterprise environments. This comprehensive backend email service and developer email API features advanced queueing mechanisms, intelligent retry logic, comprehensive metrics, and seamless integration with modern cloud-native infrastructure. Complete email backend solution for backend applications.
+**sereni-email-smtp** is a production-ready SMTP email provider and email microservice engineered for reliability, security, and observability in enterprise environments. This comprehensive backend email service and developer email API features advanced queueing mechanisms, intelligent retry logic, comprehensive metrics, and seamless integration with modern cloud-native infrastructure as an email sending service, an email service for backend systems, and an open source smtp provider for transactional workflows. Complete email backend solution for backend applications.
 
 ## Key Features
 

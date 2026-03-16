@@ -8,7 +8,7 @@ package test
 import (
 	"bytes"
 	"crypto/tls"
-	"email-service/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"errors"
 	"io"
 	"net/smtp"

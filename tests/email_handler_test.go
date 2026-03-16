@@ -13,8 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"email-service/internal/email"
-	"email-service/internal/handlers"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )

@@ -8,7 +8,7 @@ package test
 import (
 	"testing"
 
-	"email-service/internal/templatecache"
+	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 )
 
 func TestParseAndCacheTemplate_SuccessAndFail(t *testing.T) {

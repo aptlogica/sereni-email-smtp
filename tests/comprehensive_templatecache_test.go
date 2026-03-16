@@ -6,7 +6,7 @@
 package test
 
 import (
-	"email-service/internal/templatecache"
+	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 	"html/template"
 	"testing"
 )
