@@ -5,11 +5,11 @@
 [![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Quality Gate Status](https://sonar.aptlogica.com/api/project_badges/measure?project=aptlogica_sereni-email-smtp_12345678&metric=alert_status&token=sqb_152d71a0f9a3621514372a3e4c87460e3059bbc2)](https://sonar.aptlogica.com/dashboard?id=aptlogica_sereni-email-smtp_12345678)
+[![Quality Gate Status](https://sonar.aptlogica.com/api/project_badges/measure?project=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a&metric=alert_status&token=sqb_152d71a0f9a3621514372a3e4c87460e3059bbc2)](https://sonar.aptlogica.com/dashboard?id=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a)
 
 ## Overview
 
-**sereni-email-smtp** is a production-ready SMTP email provider and email microservice engineered for reliability, security, and observability in enterprise environments. This comprehensive backend email service and developer email API features advanced queueing mechanisms, intelligent retry logic, comprehensive metrics, and seamless integration with modern cloud-native infrastructure. Complete email backend solution for backend applications.
+**sereni-email-smtp** is a production-ready SMTP email provider and email microservice engineered for reliability, security, and observability in enterprise environments. This comprehensive backend email service and developer email API features advanced queueing mechanisms, intelligent retry logic, comprehensive metrics, and seamless integration with modern cloud-native infrastructure as an email sending service, an email service for backend systems, and an open source smtp provider for transactional workflows. Complete email backend solution for backend applications.
 
 ## Key Features
 

@@ -14,11 +14,11 @@ support@serenibase.com
 package main
 
 import (
-	_ "email-service/docs" // Import generated docs
-	"email-service/internal/config"
-	"email-service/internal/email"
-	"email-service/internal/handlers"
-	"email-service/pkg/middleware"
+	_ "github.com/aptlogica/sereni-email-smtp/docs" // Import generated docs
+	"github.com/aptlogica/sereni-email-smtp/internal/config"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
+	"github.com/aptlogica/sereni-email-smtp/pkg/middleware"
 	"log"
 
 	"github.com/gin-gonic/gin"

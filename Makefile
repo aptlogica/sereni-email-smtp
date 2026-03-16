@@ -44,21 +44,22 @@ build: ## Build the application
 # Run tests
 test: ## Run all tests
 	@echo "${GREEN}Running tests...${NC}"
-	$(GOTEST) -v -race -coverprofile=coverage.out ./...
+	@mkdir -p coverage
+	$(GOTEST) -v -race -coverprofile=coverage/coverage.out ./...
 	@echo "${GREEN}Tests completed!${NC}"
 
 # Run tests with coverage
 test-coverage: test ## Run tests and show coverage
 	@echo "${GREEN}Generating coverage report...${NC}"
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-	@echo "${BLUE}Coverage report generated: coverage.html${NC}"
+	$(GOCMD) tool cover -html=coverage/coverage.out -o coverage/coverage.html
+	@echo "${BLUE}Coverage report generated: coverage/coverage.html${NC}"
 
 # Clean build artifacts
 clean: ## Clean build artifacts
 	@echo "${YELLOW}Cleaning...${NC}"
 	$(GOCLEAN)
 	rm -rf bin/
-	rm -f coverage.out coverage.html
+	rm -rf coverage
 	@echo "${GREEN}Clean completed!${NC}"
 
 # Run the application

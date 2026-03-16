@@ -6,7 +6,7 @@
 package test
 
 import (
-	"email-service/internal/config"
+	"github.com/aptlogica/sereni-email-smtp/internal/config"
 	"io/ioutil"
 	"os"
 	"path/filepath"

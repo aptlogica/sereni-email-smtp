@@ -9,7 +9,7 @@ import (
 	"html/template"
 	"testing"
 
-	"email-service/internal/templatecache"
+	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 )
 
 func TestTemplateCache_GetSetPreload(t *testing.T) {

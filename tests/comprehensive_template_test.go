@@ -6,7 +6,7 @@
 package test
 
 import (
-	"email-service/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"errors"
 	"testing"
 )
