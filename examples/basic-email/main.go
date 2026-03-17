@@ -8,6 +8,8 @@ import (
 	"github.com/aptlogica/sereni-email-smtp/internal/email"
 )
 
+const exampleRecipient = "recipient@example.com"
+
 func main() {
 	fmt.Println("=== Sereni Email SMTP - Basic Email Example ===")
 
@@ -36,7 +38,7 @@ func main() {
 	fmt.Println("\n1. Sending simple text email...")
 
 	err := service.SendEmail(
-		[]string{"recipient@example.com"},
+		[]string{exampleRecipient},
 		"Test Email from Sereni SMTP",
 		"Hello! This is a test email sent using Sereni Email SMTP provider.",
 		false,
@@ -78,7 +80,7 @@ func main() {
 `
 
 	err = service.SendEmail(
-		[]string{"recipient@example.com"},
+		[]string{exampleRecipient},
 		"HTML Email from Sereni SMTP",
 		htmlBody,
 		true,
@@ -93,7 +95,7 @@ func main() {
 	fmt.Println("\n3. Sending templated email...")
 
 	err = service.SendTemplateEmail(
-		[]string{"recipient@example.com"},
+		[]string{exampleRecipient},
 		"welcome",
 		map[string]interface{}{
 			"name": "Sereni User",
