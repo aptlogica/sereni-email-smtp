@@ -68,6 +68,11 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	}
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
+	// Sanitize subject to prevent email header injection (CRLF injection)
+	// Remove any carriage return or newline characters from subject
+	sanitizedSubject := strings.ReplaceAll(subject, "\r", "")
+	sanitizedSubject = strings.ReplaceAll(sanitizedSubject, "\n", "")
+
 	// Set up the message
 	var message string
 	if isHTML {
@@ -75,7 +80,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
 			es.FromEmail,
 			Join(to, ", "),
-			subject,
+			sanitizedSubject,
 			body,
 		)
 	} else {
@@ -83,7 +88,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
 			es.FromEmail,
 			Join(to, ", "),
-			subject,
+			sanitizedSubject,
 			body,
 		)
 	}
@@ -185,6 +190,9 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 }
 
 func (es *EmailService) GenerateAndSendOTP(to string, expiryMinutes int) (string, error) {
+	if !IsValidEmail(to) {
+		return "", fmt.Errorf("invalid email address")
+	}
 	// Generate random OTP
 	otp := GenerateOTP()
 
@@ -230,14 +238,14 @@ func (es *EmailService) VerifyOTP(email, otp string) bool {
 }
 
 func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
+	if !IsValidEmailList(request.To) {
+		return fmt.Errorf("invalid recipient email(s)")
+	}
 	// Process template if provided
 	subject := request.Subject
 	body := request.Body
 
 	if request.Template != "" {
-		if !IsValidEmailList(request.To) {
-			return fmt.Errorf("invalid recipient email(s)")
-		}
 		renderedSubject, renderedBody, err := es.RenderTemplate(request.Template, request.TemplateData)
 		if err != nil {
 			return fmt.Errorf("failed to render template: %w", err)

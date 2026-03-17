@@ -6,8 +6,8 @@
 package handlers
 
 import (
-	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"fmt"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -118,8 +118,21 @@ func (h *EmailHandler) GenerateOTP(c *gin.Context) {
 		expiry = 5
 	}
 
-	// Generate OTP and store, but send email asynchronously
-	go h.Service.GenerateAndSendOTP(req.To, expiry)
+	if !email.IsValidEmail(req.To) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "Invalid email address",
+		})
+		return
+	}
+
+	if _, err := h.Service.GenerateAndSendOTP(req.To, expiry); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "Failed to send OTP: " + err.Error(),
+		})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

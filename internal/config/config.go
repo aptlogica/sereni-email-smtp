@@ -26,8 +26,15 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	// Load .env file if it exists (optional for Docker deployments)
-	_ = godotenv.Load()
+	// Load .env file if it exists (optional for Docker deployments).
+	// Only apply values for keys that are unset or empty in the environment.
+	if envMap, err := godotenv.Read(); err == nil {
+		for key, value := range envMap {
+			if os.Getenv(key) == "" {
+				_ = os.Setenv(key, value)
+			}
+		}
+	}
 
 	return &Config{
 		Host:          GetEnv("HOST", "0.0.0.0"),

@@ -8,8 +8,8 @@ package test
 import (
 	"bytes"
 	"crypto/tls"
-	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"errors"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"io"
 	"net/smtp"
 	"testing"
