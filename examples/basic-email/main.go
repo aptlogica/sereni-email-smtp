@@ -3,151 +3,124 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 
-	email "github.com/aptlogica/sereni-email-smtp"
+	"github.com/aptlogica/sereni-email-smtp/internal/config"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 )
 
 func main() {
 	fmt.Println("=== Sereni Email SMTP - Basic Email Example ===")
 
 	// Load configuration from environment variables
-	config := email.Config{
-		Host:     getEnv("SMTP_HOST", "smtp.gmail.com"),
-		Port:     587,
-		Username: getEnv("SMTP_USERNAME", ""),
-		Password: getEnv("SMTP_PASSWORD", ""),
-		From:     getEnv("SMTP_FROM", ""),
-		UseTLS:   true,
-	}
+	cfg := config.LoadConfig()
 
 	// Validate configuration
-	if config.Username == "" || config.Password == "" || config.From == "" {
-		log.Fatal("Please set SMTP_USERNAME, SMTP_PASSWORD, and SMTP_FROM environment variables")
+	if cfg.SMTPUsername == "" || cfg.SMTPPassword == "" || cfg.FromEmail == "" {
+		log.Fatal("Please set SMTP_USERNAME, SMTP_PASSWORD, and FROM_EMAIL environment variables")
 	}
 
-	// Initialize email provider
-	provider := email.NewProvider(config)
+	// Initialize email service
+	service := email.NewEmailService(
+		cfg.SMTPHost,
+		cfg.SMTPPort,
+		cfg.SMTPUsername,
+		cfg.SMTPPassword,
+		cfg.FromEmail,
+		cfg.BulkBatchSize,
+	)
 
-	fmt.Printf("Using SMTP server: %s:%d\n", config.Host, config.Port)
-	fmt.Printf("From address: %s\n", config.From)
+	fmt.Printf("Using SMTP server: %s:%d\n", cfg.SMTPHost, cfg.SMTPPort)
+	fmt.Printf("From address: %s\n", cfg.FromEmail)
 
 	// Example 1: Send a simple text email
 	fmt.Println("\n1. Sending simple text email...")
 
-	textEmail := email.Email{
-		To:      []string{"recipient@example.com"},
-		Subject: "Test Email from Sereni SMTP",
-		Body:    "Hello! This is a test email sent using Sereni Email SMTP provider.",
-		IsHTML:  false,
-	}
-
-	err := provider.SendEmail(textEmail)
+	err := service.SendEmail(
+		[]string{"recipient@example.com"},
+		"Test Email from Sereni SMTP",
+		"Hello! This is a test email sent using Sereni Email SMTP provider.",
+		false,
+	)
 	if err != nil {
-		log.Printf("❌ Failed to send text email: %v", err)
+		log.Printf("Failed to send text email: %v", err)
 	} else {
-		fmt.Println("✅ Text email sent successfully!")
+		fmt.Println("Text email sent successfully!")
 	}
 
 	// Example 2: Send HTML email
 	fmt.Println("\n2. Sending HTML email...")
 
-	htmlEmail := email.Email{
-		To:      []string{"recipient@example.com"},
-		Subject: "HTML Email from Sereni SMTP",
-		Body: `
-			<html>
-			<head>
-				<title>Welcome to Sereni</title>
-			</head>
-			<body>
-				<h1>🎉 Welcome to Sereni!</h1>
-				<p>This is an <strong>HTML email</strong> sent using the Sereni Email SMTP provider.</p>
-				
-				<h2>Features:</h2>
-				<ul>
-					<li>✅ Support for multiple SMTP providers</li>
-					<li>✅ HTML and text email support</li>
-					<li>✅ Template-based emails</li>
-					<li>✅ Attachment support</li>
-					<li>✅ Bulk email sending</li>
-				</ul>
-				
-				<p>
-					<a href="https://github.com/aptlogica/sereni-email-smtp" 
-					   style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-						View Documentation
-					</a>
-				</p>
-				
-				<hr>
-				<p><small>Sent with ❤️ using Sereni Email SMTP</small></p>
-			</body>
-			</html>
-		`,
-		IsHTML: true,
-	}
+	htmlBody := `
+<html>
+<head>
+	<title>Welcome to Sereni</title>
+</head>
+<body>
+	<h1>Welcome to Sereni</h1>
+	<p>This is an <strong>HTML email</strong> sent using the Sereni Email SMTP service.</p>
 
-	err = provider.SendEmail(htmlEmail)
+	<h2>Features:</h2>
+	<ul>
+		<li>Support for multiple SMTP providers</li>
+		<li>HTML and text email support</li>
+		<li>Template-based emails</li>
+		<li>Bulk email sending</li>
+	</ul>
+
+	<p>
+		<a href="https://github.com/aptlogica/sereni-email-smtp"
+		   style="background-color: #007cba; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+			View Documentation
+		</a>
+	</p>
+</body>
+</html>
+`
+
+	err = service.SendEmail(
+		[]string{"recipient@example.com"},
+		"HTML Email from Sereni SMTP",
+		htmlBody,
+		true,
+	)
 	if err != nil {
-		log.Printf("❌ Failed to send HTML email: %v", err)
+		log.Printf("Failed to send HTML email: %v", err)
 	} else {
-		fmt.Println("✅ HTML email sent successfully!")
+		fmt.Println("HTML email sent successfully!")
 	}
 
-	// Example 3: Send email with CC and BCC
-	fmt.Println("\n3. Sending email with CC and BCC...")
+	// Example 3: Send email using a predefined template
+	fmt.Println("\n3. Sending templated email...")
 
-	ccEmail := email.Email{
-		To:      []string{"recipient@example.com"},
-		CC:      []string{"cc-recipient@example.com"},
-		BCC:     []string{"bcc-recipient@example.com"},
-		Subject: "Email with CC and BCC",
-		Body:    "This email demonstrates CC and BCC functionality.",
-		IsHTML:  false,
-	}
-
-	err = provider.SendEmail(ccEmail)
-	if err != nil {
-		log.Printf("❌ Failed to send CC/BCC email: %v", err)
-	} else {
-		fmt.Println("✅ CC/BCC email sent successfully!")
-	}
-
-	// Example 4: Send email with custom headers
-	fmt.Println("\n4. Sending email with custom headers...")
-
-	customEmail := email.Email{
-		To:      []string{"recipient@example.com"},
-		Subject: "Email with Custom Headers",
-		Body:    "This email includes custom headers for tracking and identification.",
-		IsHTML:  false,
-		Headers: map[string]string{
-			"X-Priority":   "1",
-			"X-Message-ID": "sereni-email-12345",
-			"Reply-To":     config.From,
-			"X-Campaign":   "welcome-series",
+	err = service.SendTemplateEmail(
+		[]string{"recipient@example.com"},
+		"welcome",
+		map[string]interface{}{
+			"name": "Sereni User",
 		},
+	)
+	if err != nil {
+		log.Printf("Failed to send templated email: %v", err)
+	} else {
+		fmt.Println("Templated email sent successfully!")
 	}
 
-	err = provider.SendEmail(customEmail)
+	// Example 4: Send bulk email
+	fmt.Println("\n4. Sending bulk email...")
+
+	failed, err := service.SendBulkEmail(
+		[]string{"recipient1@example.com", "recipient2@example.com"},
+		"Bulk Email from Sereni SMTP",
+		"This is a bulk email sent using Sereni Email SMTP service.",
+		false,
+	)
 	if err != nil {
-		log.Printf("❌ Failed to send custom headers email: %v", err)
+		log.Printf("Failed to send bulk email: %v", err)
+	} else if len(failed) > 0 {
+		log.Printf("Bulk email completed with failures: %v", failed)
 	} else {
-		fmt.Println("✅ Custom headers email sent successfully!")
+		fmt.Println("Bulk email sent successfully!")
 	}
 
 	fmt.Println("\n=== Example completed! ===")
-	fmt.Println("\nNext steps:")
-	fmt.Println("- Check out template-email example for dynamic content")
-	fmt.Println("- See bulk-email example for sending to multiple recipients")
-	fmt.Println("- Explore attachments example for file uploads")
-}
-
-// Helper function to get environment variables with default values
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }

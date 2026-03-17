@@ -7,9 +7,9 @@ package email
 
 import (
 	"bytes"
-	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 	"errors"
 	"fmt"
+	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 	"sync"
 )
 
