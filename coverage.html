@@ -1,0 +1,643 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>email: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/aptlogica/sereni-email-smtp/internal/email/generate_otp.go (91.7%)</option>
+				
+				<option value="file1">github.com/aptlogica/sereni-email-smtp/internal/email/service.go (89.0%)</option>
+				
+				<option value="file2">github.com/aptlogica/sereni-email-smtp/internal/email/templates.go (89.7%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
+
+// Secure OTP generation and validation helpers
+package email
+
+import (
+        "crypto/rand"
+        "encoding/binary"
+        "fmt"
+        "net/mail"
+        "regexp"
+)
+
+// GenerateOTP generates a cryptographically secure 6-digit OTP
+func GenerateOTP() string <span class="cov10" title="112">{
+        var b [4]byte
+        _, err := rand.Read(b[:])
+        if err != nil </span><span class="cov0" title="0">{
+                // fallback to time-based, but log error
+                return fmt.Sprintf("%06d", (int64(binary.BigEndian.Uint32(b[:]))+int64(err.Error()[0]))%1000000)
+        }</span>
+        <span class="cov10" title="112">return fmt.Sprintf("%06d", binary.BigEndian.Uint32(b[:])%1000000)</span>
+}
+
+// IsValidEmail checks if an email address is valid
+func IsValidEmail(email string) bool <span class="cov8" title="57">{
+        _, err := mail.ParseAddress(email)
+        return err == nil
+}</span>
+
+// IsValidEmailList checks if all emails in a slice are valid
+func IsValidEmailList(emails []string) bool <span class="cov5" title="13">{
+        for _, e := range emails </span><span class="cov6" title="16">{
+                if !IsValidEmail(e) </span><span class="cov3" title="3">{
+                        return false
+                }</span>
+        }
+        <span class="cov5" title="10">return true</span>
+}
+
+// ValidateOTPFormat checks if OTP is a 6-digit number
+func ValidateOTPFormat(otp string) bool <span class="cov9" title="111">{
+        return regexp.MustCompile(`^\d{6}$`).MatchString(otp)
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
+
+package email
+
+import (
+        "crypto/tls"
+        "fmt"
+        "io"
+        "net/smtp"
+        "strings"
+        "sync"
+        "time"
+)
+
+type EmailService struct {
+        SMTPHost      string
+        SMTPPort      int
+        SMTPUsername  string
+        SMTPPassword  string
+        FromEmail     string
+        otpStore      map[string]OTPEntry
+        mutex         sync.RWMutex
+        BulkBatchSize int
+        // SendEmailFunc, if set, will be used instead of the real SMTP send flow.
+        SendEmailFunc func(to []string, subject, body string, isHTML bool) error
+        // SendBulkEmailFunc allows overriding bulk send behavior in tests.
+        SendBulkEmailFunc func(recipients []string, subject, body string, isHTML bool) ([]string, error)
+        // Dial allows injecting a dialer for smtp clients (used in tests).
+        Dial func(addr string) (SmtpClient, error)
+}
+
+type OTPEntry struct {
+        Code    string
+        Email   string
+        Created time.Time
+        Expiry  time.Time
+}
+
+func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, fromEmail string, batchSize int) *EmailService <span class="cov9" title="35">{
+        service := &amp;EmailService{
+                SMTPHost:      smtpHost,
+                SMTPPort:      smtpPort,
+                SMTPUsername:  smtpUsername,
+                SMTPPassword:  smtpPassword,
+                FromEmail:     fromEmail,
+                otpStore:      make(map[string]OTPEntry),
+                BulkBatchSize: batchSize,
+        }
+
+        // Default Dial uses smtp.Dial
+        service.Dial = func(addr string) (SmtpClient, error) </span><span class="cov0" title="0">{
+                return smtp.Dial(addr)
+        }</span>
+
+        // Start cleanup goroutine for expired OTPs
+        <span class="cov9" title="35">go service.cleanupExpiredOTPs()
+
+        return service</span>
+}
+
+func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error <span class="cov10" title="39">{
+        // If a SendEmailFunc is provided (tests), use it
+        if es.SendEmailFunc != nil </span><span class="cov9" title="29">{
+                return es.SendEmailFunc(to, subject, body, isHTML)
+        }</span>
+        <span class="cov6" title="10">auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
+
+        // Sanitize subject to prevent email header injection (CRLF injection)
+        // Remove any carriage return or newline characters from subject
+        sanitizedSubject := strings.ReplaceAll(subject, "\r", "")
+        sanitizedSubject = strings.ReplaceAll(sanitizedSubject, "\n", "")
+
+        // Sanitize body to prevent email content injection
+        // Remove any carriage return or newline characters that could be used to inject headers
+        sanitizedBody := strings.ReplaceAll(body, "\r\n.\r\n", "\r\n. \r\n")
+        // Remove standalone CR or LF that are not part of CRLF pairs to prevent header injection
+        sanitizedBody = strings.ReplaceAll(sanitizedBody, "\r", "")
+        sanitizedBody = strings.ReplaceAll(sanitizedBody, "\n", "\r\n")
+
+        // Set up the message
+        var message string
+        if isHTML </span><span class="cov1" title="1">{
+                message = fmt.Sprintf(
+                        "From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
+                        es.FromEmail,
+                        Join(to, ", "),
+                        sanitizedSubject,
+                        sanitizedBody,
+                )
+        }</span> else<span class="cov6" title="9"> {
+                message = fmt.Sprintf(
+                        "From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
+                        es.FromEmail,
+                        Join(to, ", "),
+                        sanitizedSubject,
+                        sanitizedBody,
+                )
+        }</span>
+
+        // Connect to server
+        // Use injected Dial for testability
+        <span class="cov6" title="10">conn, err := es.Dial(fmt.Sprintf("%s:%d", es.SMTPHost, es.SMTPPort))
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+        <span class="cov6" title="9">defer conn.Close()
+
+        // TLS
+        if err = conn.StartTLS(&amp;tls.Config{ServerName: es.SMTPHost}); err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        // Authenticate
+        <span class="cov6" title="8">if err = conn.Auth(auth); err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        // Send email
+        <span class="cov5" title="7">if err = conn.Mail(es.FromEmail); err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        <span class="cov5" title="6">for _, addr := range to </span><span class="cov5" title="6">{
+                if err = conn.Rcpt(addr); err != nil </span><span class="cov1" title="1">{
+                        return err
+                }</span>
+        }
+
+        <span class="cov4" title="5">writer, err := conn.Data()
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        <span class="cov4" title="4">_, err = writer.Write([]byte(message))
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        <span class="cov3" title="3">err = writer.Close()
+        if err != nil </span><span class="cov1" title="1">{
+                return err
+        }</span>
+
+        <span class="cov2" title="2">return conn.Quit()</span>
+}
+
+// SmtpClient abstracts the subset of smtp.Client used by SendEmail
+type SmtpClient interface {
+        StartTLS(config *tls.Config) error
+        Auth(a smtp.Auth) error
+        Mail(from string) error
+        Rcpt(to string) error
+        Data() (io.WriteCloser, error)
+        Close() error
+        Quit() error
+}
+
+func (es *EmailService) SendBulkEmail(recipients []string, subject, body string, isHTML bool) ([]string, error) <span class="cov6" title="9">{
+        if es.SendBulkEmailFunc != nil </span><span class="cov5" title="6">{
+                return es.SendBulkEmailFunc(recipients, subject, body, isHTML)
+        }</span>
+        <span class="cov3" title="3">var failedEmails []string
+        var wg sync.WaitGroup
+        var mu sync.Mutex
+
+        batchSize := es.BulkBatchSize
+        if batchSize &lt;= 0 </span><span class="cov0" title="0">{
+                batchSize = 10
+        }</span>
+        <span class="cov3" title="3">semaphore := make(chan struct{}, batchSize)
+
+        for _, recipient := range recipients </span><span class="cov5" title="7">{
+                if !IsValidEmail(recipient) </span><span class="cov2" title="2">{
+                        mu.Lock()
+                        failedEmails = append(failedEmails, recipient)
+                        mu.Unlock()
+                        continue</span>
+                }
+                <span class="cov4" title="5">wg.Add(1)
+                go func(email string) </span><span class="cov4" title="5">{
+                        defer wg.Done()
+                        semaphore &lt;- struct{}{}        // Acquire semaphore
+                        defer func() </span><span class="cov4" title="5">{ &lt;-semaphore }</span>() // Release semaphore
+
+                        <span class="cov4" title="5">err := es.SendEmail([]string{email}, subject, body, isHTML)
+                        if err != nil </span><span class="cov1" title="1">{
+                                mu.Lock()
+                                failedEmails = append(failedEmails, email)
+                                mu.Unlock()
+                        }</span>
+                }(recipient)
+        }
+
+        <span class="cov3" title="3">wg.Wait()
+        return failedEmails, nil</span>
+}
+
+func (es *EmailService) GenerateAndSendOTP(to string, expiryMinutes int) (string, error) <span class="cov7" title="12">{
+        if !IsValidEmail(to) </span><span class="cov1" title="1">{
+                return "", fmt.Errorf("invalid email address")
+        }</span>
+        // Generate random OTP
+        <span class="cov6" title="11">otp := GenerateOTP()
+
+        // Create OTP entry
+        expiryTime := time.Now().Add(time.Duration(expiryMinutes) * time.Minute)
+        otpEntry := OTPEntry{
+                Code:    otp,
+                Email:   to,
+                Created: time.Now(),
+                Expiry:  expiryTime,
+        }
+
+        // Store OTP
+        es.mutex.Lock()
+        es.otpStore[fmt.Sprintf("%s:%s", to, otp)] = otpEntry
+        es.mutex.Unlock()
+
+        // Use template for OTP email
+        templateData := map[string]interface{}{
+                "otp":    otp,
+                "expiry": expiryMinutes,
+        }
+
+        err := es.SendTemplateEmail([]string{to}, "otp_template", templateData)
+        if err != nil </span><span class="cov2" title="2">{
+                return "", err
+        }</span>
+
+        <span class="cov6" title="9">return otp, nil</span>
+}
+
+func (es *EmailService) VerifyOTP(email, otp string) bool <span class="cov6" title="8">{
+        key := fmt.Sprintf("%s:%s", email, otp)
+        es.mutex.Lock()
+        defer es.mutex.Unlock()
+
+        entry, exists := es.otpStore[key]
+        if !exists || time.Now().After(entry.Expiry) </span><span class="cov4" title="5">{
+                return false
+        }</span>
+        <span class="cov3" title="3">delete(es.otpStore, key)
+        return true</span>
+}
+
+func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error <span class="cov6" title="9">{
+        if !IsValidEmailList(request.To) </span><span class="cov2" title="2">{
+                return fmt.Errorf("invalid recipient email(s)")
+        }</span>
+        // Process template if provided
+        <span class="cov5" title="7">subject := request.Subject
+        body := request.Body
+
+        if request.Template != "" </span><span class="cov0" title="0">{
+                renderedSubject, renderedBody, err := es.RenderTemplate(request.Template, request.TemplateData)
+                if err != nil </span><span class="cov0" title="0">{
+                        return fmt.Errorf("failed to render template: %w", err)
+                }</span>
+                <span class="cov0" title="0">subject = renderedSubject
+                body = renderedBody</span>
+        }
+
+        <span class="cov5" title="7">return es.SendEmail(request.To, subject, body, request.IsHTML)</span>
+}
+
+func (es *EmailService) cleanupExpiredOTPs() <span class="cov9" title="35">{
+        ticker := time.NewTicker(1 * time.Minute)
+        defer ticker.Stop()
+
+        for range ticker.C </span><span class="cov0" title="0">{
+                es.mutex.Lock()
+                for key, entry := range es.otpStore </span><span class="cov0" title="0">{
+                        if time.Now().After(entry.Expiry) </span><span class="cov0" title="0">{
+                                delete(es.otpStore, key)
+                        }</span>
+                }
+                <span class="cov0" title="0">es.mutex.Unlock()</span>
+        }
+}
+
+func Join(elements []string, sep string) string <span class="cov7" title="14">{
+        return strings.Join(elements, sep)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// SPDX-License-Identifier: MIT
+// Websites: https://www.aptlogica.com | https://www.serenibase.com
+// Support: support@aptlogica.com | support@serenibase.com
+
+package email
+
+import (
+        "bytes"
+        "errors"
+        "fmt"
+        "github.com/aptlogica/sereni-email-smtp/internal/templatecache"
+        "sync"
+)
+
+// EmailTemplate represents a template for emails
+type EmailTemplate struct {
+        Name     string
+        Subject  string
+        HTMLBody string
+        TextBody string
+}
+
+// TemplateData holds the data to be used in templates
+type TemplateData struct {
+        Data map[string]interface{}
+}
+
+// Mutex for synchronizing access to predefined templates
+var templateMu sync.RWMutex
+var tmplCache = templatecache.NewTemplateCache()
+
+// Predefined templates
+var predefinedTemplates = map[string]EmailTemplate{
+        "welcome": {
+                Subject: "Welcome to Our Service!",
+                HTMLBody: `
+        &lt;html&gt;
+        &lt;body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"&gt;
+            &lt;div style="max-width: 600px; margin: 0 auto; padding: 20px;"&gt;
+                &lt;h1 style="color: #2c3e50;"&gt;Welcome, {{.name}}!&lt;/h1&gt;
+                &lt;p&gt;Thank you for joining our service. We're excited to have you on board.&lt;/p&gt;
+                &lt;p&gt;Here are some next steps you might want to take:&lt;/p&gt;
+                &lt;ul&gt;
+                    &lt;li&gt;Complete your profile&lt;/li&gt;
+                    &lt;li&gt;Explore our features&lt;/li&gt;
+                    &lt;li&gt;Connect with other users&lt;/li&gt;
+                &lt;/ul&gt;
+                &lt;p&gt;If you have any questions, feel free to reach out to our support team.&lt;/p&gt;
+                &lt;p&gt;Best regards,&lt;br&gt;The Team&lt;/p&gt;
+            &lt;/div&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+        `,
+                TextBody: "Welcome, {{.name}}! Thank you for joining our service. We're excited to have you on board.",
+        },
+        "password_reset": {
+                Subject: "Password Reset Request",
+                HTMLBody: `
+        &lt;html&gt;
+        &lt;body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"&gt;
+            &lt;div style="max-width: 600px; margin: 0 auto; padding: 20px;"&gt;
+                &lt;h1 style="color: #2c3e50;"&gt;Password Reset&lt;/h1&gt;
+                &lt;p&gt;You have requested to reset your password. Click the button below to reset it:&lt;/p&gt;
+                &lt;div style="text-align: center; margin: 30px 0;"&gt;
+                    &lt;a href="{{.reset_url}}" style="background-color: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;"&gt;Reset Password&lt;/a&gt;
+                &lt;/div&gt;
+                &lt;p&gt;If you didn't request this, please ignore this email.&lt;/p&gt;
+                &lt;p&gt;This link will expire in 24 hours.&lt;/p&gt;
+                &lt;p&gt;Best regards,&lt;br&gt;The Team&lt;/p&gt;
+            &lt;/div&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+        `,
+                TextBody: "You have requested to reset your password. Visit this link to reset it: {{.reset_url}}",
+        },
+        "verification": {
+                Subject: "Email Verification Required",
+                HTMLBody: `
+        &lt;html&gt;
+        &lt;body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"&gt;
+            &lt;div style="max-width: 600px; margin: 0 auto; padding: 20px;"&gt;
+                &lt;h1 style="color: #2c3e50;"&gt;Verify Your Email&lt;/h1&gt;
+                &lt;p&gt;Please click the button below to verify your email address:&lt;/p&gt;
+                &lt;div style="text-align: center; margin: 30px 0;"&gt;
+                    &lt;a href="{{.verification_url}}" style="background-color: #27ae60; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;"&gt;Verify Email&lt;/a&gt;
+                &lt;/div&gt;
+                &lt;p&gt;If you didn't create an account with us, please ignore this email.&lt;/p&gt;
+                &lt;p&gt;Best regards,&lt;br&gt;The Team&lt;/p&gt;
+            &lt;/div&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+        `,
+                TextBody: "Please verify your email by visiting: {{.verification_url}}",
+        },
+        "otp_template": {
+                Subject: "Your Verification Code",
+                HTMLBody: `
+        &lt;html&gt;
+        &lt;body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"&gt;
+            &lt;div style="max-width: 600px; margin: 0 auto; padding: 20px;"&gt;
+                &lt;h1 style="color: #2c3e50;"&gt;Verification Code&lt;/h1&gt;
+                &lt;p&gt;Your verification code is:&lt;/p&gt;
+                &lt;div style="text-align: center; margin: 30px 0;"&gt;
+                    &lt;span style="font-size: 24px; font-weight: bold; background-color: #f8f9fa; padding: 10px 20px; border-radius: 4px; letter-spacing: 3px;"&gt;{{.otp}}&lt;/span&gt;
+                &lt;/div&gt;
+                &lt;p&gt;This code will expire in {{.expiry}} minutes.&lt;/p&gt;
+                &lt;p&gt;If you didn't request this code, please ignore this email.&lt;/p&gt;
+                &lt;p&gt;Best regards,&lt;br&gt;The Team&lt;/p&gt;
+            &lt;/div&gt;
+        &lt;/body&gt;
+        &lt;/html&gt;
+        `,
+                TextBody: "Your verification code is: {{.otp}} (expires in {{.expiry}} minutes)",
+        },
+}
+
+// RenderTemplate renders a template with the provided data
+func (es *EmailService) RenderTemplate(templateName string, data map[string]interface{}) (string, string, error) <span class="cov9" title="20">{
+        templateMu.RLock()
+        template, exists := predefinedTemplates[templateName]
+        templateMu.RUnlock()
+        if !exists </span><span class="cov4" title="4">{
+                return "", "", errors.New("template not found: " + templateName)
+        }</span>
+
+        // Get parsed HTML template from cache or parse and store
+        <span class="cov8" title="16">htmlTmpl, ok := tmplCache.Get(templateName + ":html")
+        if !ok </span><span class="cov1" title="1">{
+                var err error
+                htmlTmpl, err = templatecache.ParseAndCacheTemplate(tmplCache, templateName+":html", template.HTMLBody)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", "", fmt.Errorf("error parsing HTML body: %w", err)
+                }</span>
+        }
+        <span class="cov8" title="16">var htmlBuf bytes.Buffer
+        if err := htmlTmpl.Execute(&amp;htmlBuf, data); err != nil </span><span class="cov0" title="0">{
+                return "", "", fmt.Errorf("error executing HTML body: %w", err)
+        }</span>
+
+        // Get parsed subject template from cache or parse and store
+        <span class="cov8" title="16">subjTmpl, ok := tmplCache.Get(templateName + ":subject")
+        if !ok </span><span class="cov1" title="1">{
+                var err error
+                subjTmpl, err = templatecache.ParseAndCacheTemplate(tmplCache, templateName+":subject", template.Subject)
+                if err != nil </span><span class="cov0" title="0">{
+                        return "", "", fmt.Errorf("error parsing subject: %w", err)
+                }</span>
+        }
+        <span class="cov8" title="16">var subjBuf bytes.Buffer
+        if err := subjTmpl.Execute(&amp;subjBuf, data); err != nil </span><span class="cov0" title="0">{
+                return "", "", fmt.Errorf("error executing subject: %w", err)
+        }</span>
+
+        <span class="cov8" title="16">return subjBuf.String(), htmlBuf.String(), nil</span>
+}
+
+// AddTemplate adds a new template to the service
+func (es *EmailService) AddTemplate(name string, template EmailTemplate) <span class="cov4" title="4">{
+        es.mutex.Lock()
+        defer es.mutex.Unlock()
+        predefinedTemplates[name] = template
+}</span>
+
+// GetTemplate returns a template by name
+func (es *EmailService) GetTemplate(name string) (EmailTemplate, bool) <span class="cov4" title="4">{
+        template, exists := predefinedTemplates[name]
+        return template, exists
+}</span>
+
+// SendTemplateEmail sends an email using a predefined template
+func (es *EmailService) SendTemplateEmail(to []string, templateName string, templateData map[string]interface{}) error <span class="cov8" title="16">{
+        subject, htmlBody, err := es.RenderTemplate(templateName, templateData)
+        if err != nil </span><span class="cov2" title="2">{
+                return fmt.Errorf("failed to render template: %w", err)
+        }</span>
+
+        <span class="cov8" title="14">return es.SendEmail(to, subject, htmlBody, true)</span>
+}
+
+// GetAvailableTemplates returns a list of available template names
+func (es *EmailService) GetAvailableTemplates() []string <span class="cov4" title="4">{
+        var templates []string
+        templateMu.RLock()
+        for name := range predefinedTemplates </span><span class="cov10" title="29">{
+                templates = append(templates, name)
+        }</span>
+        <span class="cov4" title="4">templateMu.RUnlock()
+        return templates</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

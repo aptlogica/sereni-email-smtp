@@ -73,6 +73,13 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	sanitizedSubject := strings.ReplaceAll(subject, "\r", "")
 	sanitizedSubject = strings.ReplaceAll(sanitizedSubject, "\n", "")
 
+	// Sanitize body to prevent email content injection
+	// Remove any carriage return or newline characters that could be used to inject headers
+	sanitizedBody := strings.ReplaceAll(body, "\r\n.\r\n", "\r\n. \r\n")
+	// Remove standalone CR or LF that are not part of CRLF pairs to prevent header injection
+	sanitizedBody = strings.ReplaceAll(sanitizedBody, "\r", "")
+	sanitizedBody = strings.ReplaceAll(sanitizedBody, "\n", "\r\n")
+
 	// Set up the message
 	var message string
 	if isHTML {
@@ -81,7 +88,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 			es.FromEmail,
 			Join(to, ", "),
 			sanitizedSubject,
-			body,
+			sanitizedBody,
 		)
 	} else {
 		message = fmt.Sprintf(
@@ -89,7 +96,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 			es.FromEmail,
 			Join(to, ", "),
 			sanitizedSubject,
-			body,
+			sanitizedBody,
 		)
 	}
 
@@ -167,7 +174,9 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 
 	for _, recipient := range recipients {
 		if !IsValidEmail(recipient) {
+			mu.Lock()
 			failedEmails = append(failedEmails, recipient)
+			mu.Unlock()
 			continue
 		}
 		wg.Add(1)

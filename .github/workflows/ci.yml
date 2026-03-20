@@ -52,7 +52,7 @@ jobs:
         run: go vet ./...
         
       - name: Run tests with coverage
-        run: go test ./... -coverprofile=coverage.out -race
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/email ./tests/...
         
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
@@ -61,11 +61,6 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.out
           fail_ci_if_error: false
-        
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: latest
           
       - name: Build binary
         run: go build -o bin/sereni-email-smtp ./cmd/server

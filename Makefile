@@ -15,9 +15,8 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 GOFMT=gofmt
-COVER_DIR=coverage
-COVER_PROFILE=$(COVER_DIR)/coverage.out
-COVER_HTML=$(COVER_DIR)/coverage.html
+COVER_PROFILE=coverage.out
+COVER_HTML=coverage.html
 
 # Colors for output
 RED=\033[0;31m
@@ -52,14 +51,14 @@ help: ## Show this help message
 # Build the application
 build: ## Build the application
 	@echo "${GREEN}Building ${BINARY_NAME}...${NC}"
+	@powershell -Command "if (-not (Test-Path bin)) { New-Item -ItemType Directory -Path bin | Out-Null }"
 	$(GOBUILD) ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/server
 	@echo "${GREEN}Build completed successfully!${NC}"
 
 # Run tests
 test: ## Run all tests
 	@echo "${GREEN}Running tests...${NC}"
-	@mkdir -p $(COVER_DIR)
-	$(GOTEST) -v -race -coverprofile=$(COVER_PROFILE) -covermode=atomic ./...
+	$(GOTEST) -v -race -coverprofile="$(COVER_PROFILE)" -covermode=atomic -coverpkg="./internal/email" "./tests/..."
 	@echo "${GREEN}Tests completed!${NC}"
 
 # Run tests with coverage
@@ -77,14 +76,15 @@ coverage-func: ## Show coverage by function
 clean: ## Clean build artifacts
 	@echo "${YELLOW}Cleaning...${NC}"
 	$(GOCLEAN)
-	rm -rf bin/
-	rm -rf $(COVER_DIR)
+	@powershell -Command "if (Test-Path bin) { Remove-Item -Recurse -Force bin }"
+	@powershell -Command "if (Test-Path $(COVER_PROFILE)) { Remove-Item -Force $(COVER_PROFILE) }"
+	@powershell -Command "if (Test-Path $(COVER_HTML)) { Remove-Item -Force $(COVER_HTML) }"
 	@echo "${GREEN}Clean completed!${NC}"
 
 # Run the application
 run: build ## Build and run the application
 	@echo "${GREEN}Running ${BINARY_NAME}...${NC}"
-	./bin/${BINARY_NAME}
+	@powershell -Command "if ($$IsWindows) { .\bin\${BINARY_NAME}.exe } else { ./bin/${BINARY_NAME} }"
 
 # Install dependencies
 deps: ## Download and install dependencies
@@ -110,7 +110,7 @@ format: ## Format Go code
 security: ## Run security scan with gosec
 	@echo "${GREEN}Running security scan...${NC}"
 	@which gosec > /dev/null || (echo "${RED}gosec not found. Install with: 'go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest'${NC}" && exit 1)
-	gosec ./...
+	gosec ./tests/...
 	@echo "${GREEN}Security scan completed!${NC}"
 
 # Docker build

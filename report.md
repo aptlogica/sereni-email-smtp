@@ -3,7 +3,7 @@ Test Coverage Report
 
 Summary
 
-Command run: `go test ./... -coverprofile=coverage/coverage.out -covermode=atomic`
+Command run: `go test ./... -coverprofile=coverage.out -covermode=atomic`
 Goal: raise package coverage to >= 90%
 
 Per-package coverage
@@ -39,8 +39,8 @@ Recommendations & Next Actions
 3) Produce an overall coverage HTML report:
 
 ```bash
-go test ./... -coverprofile=coverage/coverage.out -covermode=atomic
-go tool cover -html=coverage/coverage.out -o coverage/coverage.html
+go test ./... -coverprofile=coverage.out -covermode=atomic
+go tool cover -html=coverage.out -o coverage/coverage.html
 ```
 
 Actions I can take next
