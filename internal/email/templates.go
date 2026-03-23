@@ -175,7 +175,7 @@ func (es *EmailService) SendTemplateEmail(to []string, templateName string, temp
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
-	return es.SendEmail(to, subject, htmlBody, true)
+	return es.sendEmail(to, subject, htmlBody, true, true)
 }
 
 // GetAvailableTemplates returns a list of available template names

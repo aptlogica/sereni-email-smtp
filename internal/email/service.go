@@ -8,6 +8,7 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"html"
 	"io"
 	"net/smtp"
 	"strings"
@@ -62,23 +63,18 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 }
 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
+	return es.sendEmail(to, subject, body, isHTML, false)
+}
+
+func (es *EmailService) sendEmail(to []string, subject, body string, isHTML bool, allowUnsafeHTML bool) error {
 	// If a SendEmailFunc is provided (tests), use it
 	if es.SendEmailFunc != nil {
 		return es.SendEmailFunc(to, subject, body, isHTML)
 	}
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
-	// Sanitize subject to prevent email header injection (CRLF injection)
-	// Remove any carriage return or newline characters from subject
-	sanitizedSubject := strings.ReplaceAll(subject, "\r", "")
-	sanitizedSubject = strings.ReplaceAll(sanitizedSubject, "\n", "")
-
-	// Sanitize body to prevent email content injection
-	// Remove any carriage return or newline characters that could be used to inject headers
-	sanitizedBody := strings.ReplaceAll(body, "\r\n.\r\n", "\r\n. \r\n")
-	// Remove standalone CR or LF that are not part of CRLF pairs to prevent header injection
-	sanitizedBody = strings.ReplaceAll(sanitizedBody, "\r", "")
-	sanitizedBody = strings.ReplaceAll(sanitizedBody, "\n", "\r\n")
+	sanitizedSubject := sanitizeEmailSubject(subject)
+	sanitizedBody := sanitizeEmailBody(body, isHTML, allowUnsafeHTML)
 
 	// Set up the message
 	var message string
@@ -147,6 +143,25 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	return conn.Quit()
 }
 
+func sanitizeEmailSubject(subject string) string {
+	// Remove any carriage return or newline characters from subject to prevent header injection.
+	sanitized := strings.ReplaceAll(subject, "\r", "")
+	return strings.ReplaceAll(sanitized, "\n", "")
+}
+
+func sanitizeEmailBody(body string, isHTML bool, allowUnsafeHTML bool) string {
+	// Normalize CRLF and prevent dot-stuffing injection.
+	sanitized := strings.ReplaceAll(body, "\r\n.\r\n", "\r\n. \r\n")
+	sanitized = strings.ReplaceAll(sanitized, "\r", "")
+	sanitized = strings.ReplaceAll(sanitized, "\n", "\r\n")
+
+	if isHTML && !allowUnsafeHTML {
+		// Treat untrusted HTML as text to avoid content injection in clients.
+		sanitized = html.EscapeString(sanitized)
+	}
+	return sanitized
+}
+
 // SmtpClient abstracts the subset of smtp.Client used by SendEmail
 type SmtpClient interface {
 	StartTLS(config *tls.Config) error
@@ -185,7 +200,7 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 			semaphore <- struct{}{}        // Acquire semaphore
 			defer func() { <-semaphore }() // Release semaphore
 
-			err := es.SendEmail([]string{email}, subject, body, isHTML)
+			err := es.sendEmail([]string{email}, subject, body, isHTML, false)
 			if err != nil {
 				mu.Lock()
 				failedEmails = append(failedEmails, email)
@@ -261,9 +276,10 @@ func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
 		}
 		subject = renderedSubject
 		body = renderedBody
+		return es.sendEmail(request.To, subject, body, true, true)
 	}
 
-	return es.SendEmail(request.To, subject, body, request.IsHTML)
+	return es.sendEmail(request.To, subject, body, request.IsHTML, false)
 }
 
 func (es *EmailService) cleanupExpiredOTPs() {
