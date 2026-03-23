@@ -10,8 +10,7 @@ pipeline {
 
     stage('Test & Coverage') {
       steps {
-        sh 'mkdir -p coverage'
-        sh 'go test ./... -coverprofile=coverage.out -covermode=atomic'
+        sh 'go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./tests/...'
       }
     }
 
