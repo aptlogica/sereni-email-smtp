@@ -7,10 +7,10 @@ package test
 
 import (
 	"bytes"
-	"email-service/internal/email"
-	"email-service/internal/handlers"
 	"encoding/json"
 	"errors"
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
 	"net/http"
 	"net/http/httptest"
 	"testing"

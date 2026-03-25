@@ -8,6 +8,12 @@ pipeline {
       }
     }
 
+    stage('Test & Coverage') {
+      steps {
+        sh 'go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./... ./tests/...'
+      }
+    }
+
     stage('SonarQube Analysis') {
         when {
         anyOf {

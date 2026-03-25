@@ -40,7 +40,7 @@ Recommendations & Next Actions
 
 ```bash
 go test ./... -coverprofile=coverage.out -covermode=atomic
-go tool cover -html=coverage.out -o coverage.html
+go tool cover -html=coverage.out -o coverage/coverage.html
 ```
 
 Actions I can take next

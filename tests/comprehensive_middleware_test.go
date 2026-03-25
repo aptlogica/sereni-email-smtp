@@ -6,7 +6,7 @@
 package test
 
 import (
-	"email-service/pkg/middleware"
+	"github.com/aptlogica/sereni-email-smtp/pkg/middleware"
 	"net/http"
 	"net/http/httptest"
 	"testing"

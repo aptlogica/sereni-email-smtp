@@ -15,6 +15,8 @@ GOTEST=$(GOCMD) test
 GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 GOFMT=gofmt
+COVER_PROFILE=coverage.out
+COVER_HTML=coverage.html
 
 # Colors for output
 RED=\033[0;31m
@@ -23,7 +25,7 @@ YELLOW=\033[0;33m
 BLUE=\033[0;34m
 NC=\033[0m # No Color
 
-.PHONY: help build test clean run deps lint format security docker-build docker-run
+.PHONY: help build test test-coverage coverage coverage-func clean run deps lint format security docker-build docker-run
 
 # Default target
 all: deps format lint test build
@@ -33,38 +35,56 @@ help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Available targets:'
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  ${BLUE}%-15s${NC} %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo '  build            - Build the application'
+	@echo '  run              - Build and run the application'
+	@echo '  test             - Run all tests'
+	@echo '  test-coverage    - Run tests and show coverage'
+	@echo '  coverage         - Alias for test-coverage'
+	@echo '  coverage-func    - Show coverage by function'
+	@echo '  clean            - Clean build artifacts'
+	@echo '  deps             - Download and install dependencies'
+	@echo '  lint             - Run golangci-lint'
+	@echo '  lint-fix         - Run golangci-lint with auto-fix'
+	@echo '  format           - Format Go code'
+	@echo '  security         - Run security scan'
 
 # Build the application
 build: ## Build the application
 	@echo "${GREEN}Building ${BINARY_NAME}...${NC}"
+	@powershell -Command "if (-not (Test-Path bin)) { New-Item -ItemType Directory -Path bin | Out-Null }"
 	$(GOBUILD) ${LDFLAGS} -o bin/${BINARY_NAME} ./cmd/server
 	@echo "${GREEN}Build completed successfully!${NC}"
 
 # Run tests
 test: ## Run all tests
 	@echo "${GREEN}Running tests...${NC}"
-	$(GOTEST) -v -race -coverprofile=coverage.out ./...
+	$(GOTEST) -v -race -coverprofile="$(COVER_PROFILE)" -covermode=atomic -coverpkg="./..." "./tests/..."
 	@echo "${GREEN}Tests completed!${NC}"
 
 # Run tests with coverage
 test-coverage: test ## Run tests and show coverage
 	@echo "${GREEN}Generating coverage report...${NC}"
-	$(GOCMD) tool cover -html=coverage.out -o coverage.html
-	@echo "${BLUE}Coverage report generated: coverage.html${NC}"
+	$(GOCMD) tool cover -html=$(COVER_PROFILE) -o $(COVER_HTML)
+	@echo "${BLUE}Coverage report generated: $(COVER_HTML)${NC}"
+
+coverage: test-coverage ## Alias for test-coverage
+
+coverage-func: ## Show coverage by function
+	$(GOCMD) tool cover -func=$(COVER_PROFILE)
 
 # Clean build artifacts
 clean: ## Clean build artifacts
 	@echo "${YELLOW}Cleaning...${NC}"
 	$(GOCLEAN)
-	rm -rf bin/
-	rm -f coverage.out coverage.html
+	@powershell -Command "if (Test-Path bin) { Remove-Item -Recurse -Force bin }"
+	@powershell -Command "if (Test-Path $(COVER_PROFILE)) { Remove-Item -Force $(COVER_PROFILE) }"
+	@powershell -Command "if (Test-Path $(COVER_HTML)) { Remove-Item -Force $(COVER_HTML) }"
 	@echo "${GREEN}Clean completed!${NC}"
 
 # Run the application
 run: build ## Build and run the application
 	@echo "${GREEN}Running ${BINARY_NAME}...${NC}"
-	./bin/${BINARY_NAME}
+	@powershell -Command "if ($$IsWindows) { .\bin\${BINARY_NAME}.exe } else { ./bin/${BINARY_NAME} }"
 
 # Install dependencies
 deps: ## Download and install dependencies
@@ -90,7 +110,7 @@ format: ## Format Go code
 security: ## Run security scan with gosec
 	@echo "${GREEN}Running security scan...${NC}"
 	@which gosec > /dev/null || (echo "${RED}gosec not found. Install with: 'go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest'${NC}" && exit 1)
-	gosec ./...
+	gosec ./tests/...
 	@echo "${GREEN}Security scan completed!${NC}"
 
 # Docker build

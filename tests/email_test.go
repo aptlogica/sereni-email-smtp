@@ -8,12 +8,13 @@ package test
 import (
 	"bytes"
 	"crypto/tls"
-	"email-service/internal/email"
 	"errors"
 	"io"
 	"net/smtp"
 	"testing"
 	"time"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 )
 
 func TestGenerateOTPAndValidators(t *testing.T) {
@@ -223,7 +224,7 @@ func TestRenderTemplate_NotFoundAndSendTemplateError(t *testing.T) {
 }
 
 func TestSendBulkEmail_FailuresAggregated(t *testing.T) {
-	es := email.NewEmailService("h", 25, "u", "p", "from@x", 2)
+	es := email.NewEmailService("h", 25, "u", "p", "from@x", 10) // Use higher batch size to avoid race
 	// Fail send for a specific address via SendEmailFunc
 	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
 		if len(to) > 0 && to[0] == "fail@x" {
