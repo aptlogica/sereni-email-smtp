@@ -15,6 +15,7 @@ import (
 	"time"
 )
 
+// EmailService provides methods for sending emails and managing OTPs.
 type EmailService struct {
 	SMTPHost      string
 	SMTPPort      int
@@ -32,6 +33,7 @@ type EmailService struct {
 	Dial func(addr string) (SmtpClient, error)
 }
 
+// OTPEntry represents a one-time password entry for email verification.
 type OTPEntry struct {
 	Code    string
 	Email   string
@@ -39,6 +41,7 @@ type OTPEntry struct {
 	Expiry  time.Time
 }
 
+// NewEmailService creates a new EmailService instance with the given SMTP configuration and batch size.
 func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, fromEmail string, batchSize int) *EmailService {
 	service := &EmailService{
 		SMTPHost:      smtpHost,
