@@ -50,15 +50,17 @@ func TestGetEnvAsInt(t *testing.T) {
 func TestLoadConfig_LoadsDefaults(t *testing.T) {
 
 	t.Setenv("HOST", "")
-	t.Setenv("PORT", "")
 	t.Setenv("ALLOWED_ORIGIN", "")
-	t.Setenv("SMTP_HOST", "")
-	t.Setenv("SMTP_PORT", "")
+	// Unset values that should be loaded from .env so godotenv.Load can override.
+	os.Unsetenv("PORT")
+	os.Unsetenv("SMTP_HOST")
+	os.Unsetenv("SMTP_PORT")
 	t.Setenv("SMTP_USERNAME", "testuser")
 	t.Setenv("SMTP_PASSWORD", "testpass")
 	t.Setenv("FROM_EMAIL", "test@example.com")
 	t.Setenv("REDIS_URL", "")
-	t.Setenv("BULK_BATCH_SIZE", "")
+	// Unset so .env can override.
+	os.Unsetenv("BULK_BATCH_SIZE")
 
 	// Use temp dir to control .env presence
 	tmpDir, err := ioutil.TempDir("", "cfgtest")

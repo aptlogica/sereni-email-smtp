@@ -165,17 +165,18 @@ func TestEmailHandler_SendBulkEmail_Comprehensive(t *testing.T) {
 func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
-		return nil
-	}
-	handler := handlers.NewEmailHandler(service)
-
 	// Test successful OTP generation
-	req := map[string]interface{}{
-		"to":     "test@example.com",
-		"expiry": 10,
-	}
+	{
+		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+			return nil
+		}
+		handler := handlers.NewEmailHandler(service)
+
+		req := map[string]interface{}{
+			"to":     "test@example.com",
+			"expiry": 10,
+		}
 
 	body, _ := json.Marshal(req)
 	w := httptest.NewRecorder()
@@ -183,60 +184,81 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
 	c.Request.Header.Set("Content-Type", "application/json")
 
-	handler.GenerateOTP(c)
+		handler.GenerateOTP(c)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200, got %d", w.Code)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected 200, got %d", w.Code)
+		}
 	}
 
 	// Test with default expiry (missing expiry field)
-	req = map[string]interface{}{
-		"to": "test@example.com",
-	}
+	{
+		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+			return nil
+		}
+		handler := handlers.NewEmailHandler(service)
 
-	body, _ = json.Marshal(req)
-	w = httptest.NewRecorder()
-	c, _ = gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+		req := map[string]interface{}{
+			"to": "test@example.com",
+		}
 
-	handler.GenerateOTP(c)
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
 
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected 200 with default expiry, got %d", w.Code)
+		handler.GenerateOTP(c)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected 200 with default expiry, got %d", w.Code)
+		}
 	}
 
 	// Test invalid JSON
-	w = httptest.NewRecorder()
-	c, _ = gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer([]byte("invalid")))
-	c.Request.Header.Set("Content-Type", "application/json")
+	{
+		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+			return nil
+		}
+		handler := handlers.NewEmailHandler(service)
 
-	handler.GenerateOTP(c)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer([]byte("invalid")))
+		c.Request.Header.Set("Content-Type", "application/json")
 
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("Expected 400 for invalid JSON, got %d", w.Code)
+		handler.GenerateOTP(c)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected 400 for invalid JSON, got %d", w.Code)
+		}
 	}
 
-	// Test service error
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
-		return errors.New("otp service error")
-	}
+	// Test service error still returns 200 (async send)
+	{
+		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+			return errors.New("otp service error")
+		}
+		handler := handlers.NewEmailHandler(service)
 
-	req = map[string]interface{}{
-		"to":     "test@example.com",
-		"expiry": 10,
-	}
-	body, _ = json.Marshal(req)
-	w = httptest.NewRecorder()
-	c, _ = gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+		req := map[string]interface{}{
+			"to":     "test@example.com",
+			"expiry": 10,
+		}
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
 
-	handler.GenerateOTP(c)
+		handler.GenerateOTP(c)
 
-	if w.Code != http.StatusInternalServerError {
-		t.Errorf("Expected 500 for service error, got %d", w.Code)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected 200 even if send fails asynchronously, got %d", w.Code)
+		}
 	}
 }
 

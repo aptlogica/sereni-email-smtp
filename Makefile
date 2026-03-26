@@ -58,8 +58,7 @@ build: ## Build the application
 # Run tests
 test: ## Run all tests
 	@echo "${GREEN}Running tests...${NC}"
-	@powershell -Command "if (-not (Test-Path .gomodcache)) { New-Item -ItemType Directory -Path .gomodcache | Out-Null }"
-	@powershell -Command "$$env:GOMODCACHE='$(CURDIR)/.gomodcache'; go test -v -race -coverprofile='$(COVER_PROFILE)' -covermode=atomic -coverpkg='github.com/aptlogica/sereni-email-smtp/internal/config,github.com/aptlogica/sereni-email-smtp/internal/email,github.com/aptlogica/sereni-email-smtp/internal/handlers,github.com/aptlogica/sereni-email-smtp/internal/templatecache' -skip='TestGenerateAndSendOTP_Comprehensive|TestSendTransactionalEmail_Comprehensive|TestEmailHandler_GenerateOTP_Comprehensive|TestLoadConfig_LoadsDefaults|TestGenerateAndSendOTP_InvalidEmail' './tests/...'"
+	@powershell -Command "go test -v -race -coverprofile='$(COVER_PROFILE)' -covermode=atomic -coverpkg='./...' './tests/...'"
 	@echo "${GREEN}Tests completed!${NC}"
 
 # Run tests with coverage
