@@ -6,9 +6,10 @@
 package test
 
 import (
-	"github.com/aptlogica/sereni-email-smtp/internal/config"
 	"os"
 	"testing"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/config"
 )
 
 func TestLoadConfig_Comprehensive(t *testing.T) {
@@ -39,6 +40,11 @@ func TestLoadConfig_Comprehensive(t *testing.T) {
 			}
 		}
 	}()
+
+	// Set required secrets for test
+	os.Setenv("SMTP_USERNAME", "testuser")
+	os.Setenv("SMTP_PASSWORD", "testpass")
+	os.Setenv("FROM_EMAIL", "test@example.com")
 
 	// Test with defaults
 	cfg := config.LoadConfig()

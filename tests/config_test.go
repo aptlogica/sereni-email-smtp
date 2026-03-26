@@ -6,11 +6,12 @@
 package test
 
 import (
-	"github.com/aptlogica/sereni-email-smtp/internal/config"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/config"
 )
 
 func TestGetEnv(t *testing.T) {
@@ -47,14 +48,15 @@ func TestGetEnvAsInt(t *testing.T) {
 }
 
 func TestLoadConfig_LoadsDefaults(t *testing.T) {
+
 	t.Setenv("HOST", "")
 	t.Setenv("PORT", "")
 	t.Setenv("ALLOWED_ORIGIN", "")
 	t.Setenv("SMTP_HOST", "")
 	t.Setenv("SMTP_PORT", "")
-	t.Setenv("SMTP_USERNAME", "")
-	t.Setenv("SMTP_PASSWORD", "")
-	t.Setenv("FROM_EMAIL", "")
+	t.Setenv("SMTP_USERNAME", "testuser")
+	t.Setenv("SMTP_PASSWORD", "testpass")
+	t.Setenv("FROM_EMAIL", "test@example.com")
 	t.Setenv("REDIS_URL", "")
 	t.Setenv("BULK_BATCH_SIZE", "")
 

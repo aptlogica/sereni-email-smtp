@@ -14,12 +14,13 @@ support@serenibase.com
 package main
 
 import (
+	"log"
+
 	_ "github.com/aptlogica/sereni-email-smtp/docs" // Import generated docs
 	"github.com/aptlogica/sereni-email-smtp/internal/config"
 	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
 	"github.com/aptlogica/sereni-email-smtp/pkg/middleware"
-	"log"
 
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -39,7 +40,7 @@ import (
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg := config.LoadConfig() // validateSecrets is called inside LoadConfig
 
 	// Initialize email service
 	emailService := email.NewEmailService(

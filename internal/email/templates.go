@@ -9,8 +9,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 	"sync"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/templatecache"
 )
 
 // EmailTemplate represents a template for emails
@@ -175,7 +176,7 @@ func (es *EmailService) SendTemplateEmail(to []string, templateName string, temp
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
-	return es.sendEmail(to, subject, htmlBody, true, true)
+	return es.SendEmail(to, subject, htmlBody, true)
 }
 
 // GetAvailableTemplates returns a list of available template names
