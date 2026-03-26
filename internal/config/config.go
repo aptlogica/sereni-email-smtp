@@ -26,17 +26,10 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	// Load .env file if it exists (optional for Docker deployments).
-	// Only apply values for keys that are unset or empty in the environment.
-	if envMap, err := godotenv.Read(); err == nil {
-		for key, value := range envMap {
-			if os.Getenv(key) == "" {
-				_ = os.Setenv(key, value)
-			}
-		}
-	}
+	// Load .env file if it exists (optional for Docker deployments)
+	_ = godotenv.Load()
 
-	return &Config{
+	cfg := &Config{
 		Host:          GetEnv("HOST", "0.0.0.0"),
 		Port:          GetEnv("PORT", "8082"),
 		AllowedOrigin: GetEnv("ALLOWED_ORIGIN", "*"),
@@ -48,8 +41,37 @@ func LoadConfig() *Config {
 		RedisURL:      GetEnv("REDIS_URL", ""),
 		BulkBatchSize: GetEnvAsInt("BULK_BATCH_SIZE", 10),
 	}
+	validateSecrets(cfg)
+	return cfg
 }
 
+// validateSecrets checks for required secrets and logs a fatal error if missing
+func validateSecrets(cfg *Config) {
+	missing := []string{}
+	if cfg.SMTPUsername == "" {
+		missing = append(missing, "SMTP_USERNAME")
+	}
+	if cfg.SMTPPassword == "" {
+		missing = append(missing, "SMTP_PASSWORD")
+	}
+	if cfg.FromEmail == "" {
+		missing = append(missing, "FROM_EMAIL")
+	}
+	if len(missing) > 0 {
+		panic("Missing required secrets: " + joinStrings(missing, ", "))
+	}
+}
+
+func joinStrings(arr []string, sep string) string {
+	if len(arr) == 0 {
+		return ""
+	}
+	result := arr[0]
+	for i := 1; i < len(arr); i++ {
+		result += sep + arr[i]
+	}
+	return result
+}
 func GetEnv(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

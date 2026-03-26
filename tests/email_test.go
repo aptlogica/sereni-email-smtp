@@ -11,11 +11,21 @@ import (
 	"errors"
 	"io"
 	"net/smtp"
-	"testing"
 	"time"
+
+	"os"
+	"testing"
 
 	"github.com/aptlogica/sereni-email-smtp/internal/email"
 )
+
+// TestMain sets required env vars for all tests in this package
+func TestMain(m *testing.M) {
+	os.Setenv("SMTP_USERNAME", "testuser")
+	os.Setenv("SMTP_PASSWORD", "testpass")
+	os.Setenv("FROM_EMAIL", "test@example.com")
+	os.Exit(m.Run())
+}
 
 func TestGenerateOTPAndValidators(t *testing.T) {
 	otp := email.GenerateOTP()
@@ -224,7 +234,7 @@ func TestRenderTemplate_NotFoundAndSendTemplateError(t *testing.T) {
 }
 
 func TestSendBulkEmail_FailuresAggregated(t *testing.T) {
-	es := email.NewEmailService("h", 25, "u", "p", "from@x", 10) // Use higher batch size to avoid race
+	es := email.NewEmailService("h", 25, "u", "p", "from@x", 2)
 	// Fail send for a specific address via SendEmailFunc
 	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
 		if len(to) > 0 && to[0] == "fail@x" {

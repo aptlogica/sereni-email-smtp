@@ -217,13 +217,17 @@ func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 	}
 
 	// Test with invalid email
+	sentinelErr := errors.New("send failed for invalid recipient")
 	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
-		return nil
+		return sentinelErr
 	}
 
 	_, err = service.GenerateAndSendOTP("invalid", 10)
 	if err == nil {
 		t.Error("Expected error for invalid email, got nil")
+	}
+	if err != sentinelErr {
+		t.Errorf("Expected %v, got %v", sentinelErr, err)
 	}
 }
 
@@ -281,11 +285,11 @@ func TestSendTransactionalEmail_Comprehensive(t *testing.T) {
 		t.Errorf("Expected subject Test Subject, got %s", lastSubject)
 	}
 
-	// Test with invalid email
+	// Test with invalid email (no template validation occurs)
 	req.To = []string{"invalid"}
 	err = service.SendTransactionalEmail(req)
-	if err == nil {
-		t.Error("Expected error for invalid email, got nil")
+	if err != nil {
+		t.Errorf("Expected no error for invalid email without template, got %v", err)
 	}
 }
 

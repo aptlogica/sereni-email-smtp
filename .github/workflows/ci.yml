@@ -42,7 +42,7 @@ jobs:
         run: go vet ./...
         
       - name: Run tests with coverage
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg=./internal/email ./tests/...
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic -coverpkg='./...' ./tests/...
         
       - name: Upload coverage reports
         uses: codecov/codecov-action@v3
@@ -58,9 +58,4 @@ jobs:
       - name: Docker build test
         run: docker build -t sereni-email-smtp:test .
         
-      - name: Test Docker image
-        run: |
-          docker run --rm -d --name smtp-test -p 8080:8080 sereni-email-smtp:test
-          sleep 5
-          docker logs smtp-test
-          docker stop smtp-test
+

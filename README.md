@@ -127,4 +127,10 @@ See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 ## License
 MIT License. Copyright (c) 2026 Aptlogica Technologies.
 
+## API Documentation
+
+See [docs/openapi.yaml](docs/openapi.yaml) for the OpenAPI 3.0 specification of the SMTP Email Service API endpoints.
+
+You can use tools like Swagger UI or Redoc to visualize and interact with the API.
+
 

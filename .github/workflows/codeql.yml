@@ -1,0 +1,14 @@
+# CodeQL workflow placeholder
+name: CodeQL
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: CodeQL step
+        run: echo "CodeQL workflow placeholder"

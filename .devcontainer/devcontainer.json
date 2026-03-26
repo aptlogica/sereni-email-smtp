@@ -1,0 +1,9 @@
+{
+  "name": "sereni-email-smtp-dev",
+  "image": "mcr.microsoft.com/devcontainers/go:1.21",
+  "features": {},
+  "settings": {
+    "go.toolsManagement.autoUpdate": true
+  },
+  "postCreateCommand": "go mod tidy && go mod download"
+}

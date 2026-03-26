@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Sereni Email SMTP API
+  description: OpenAPI specification for the Sereni Email SMTP service endpoints.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /send:
+    post:
+      summary: Send an email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+      responses:
+        '200':
+          description: Email sent successfully
+        '400':
+          description: Invalid request
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    SendEmailRequest:
+      type: object
+      properties:
+        to:
+          type: array
+          items:
+            type: string
+        subject:
+          type: string
+        body:
+          type: string
+        isHTML:
+          type: boolean
+      required:
+        - to
+        - subject
+        - body
