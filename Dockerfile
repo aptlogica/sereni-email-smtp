@@ -21,7 +21,7 @@ COPY . .
 
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o email-service ./cmd/server
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o sereni-email-smtp ./cmd/server
 
 
 # Copy swag binary for later use
@@ -37,7 +37,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 # Copy the binary from builder stage
-COPY --from=builder /app/email-service .
+COPY --from=builder /app/sereni-email-smtp .
 COPY --from=builder /app/swag .
 
 
@@ -48,4 +48,4 @@ COPY --from=builder /app/swag .
 
 
 
-ENTRYPOINT ["./email-service"]
+ENTRYPOINT ["./sereni-email-smtp"]
