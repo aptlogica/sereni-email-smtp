@@ -119,7 +119,8 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to send bulk email: %v", err)
 	} else if len(failed) > 0 {
-		log.Printf("Bulk email completed with failures: %v", failed)
+		// Log count only to avoid log injection from user-provided email addresses
+		log.Printf("Bulk email completed with %d failures", len(failed))
 	} else {
 		fmt.Println("Bulk email sent successfully!")
 	}

@@ -10,10 +10,19 @@ import (
 	"fmt"
 	"io"
 	"net/smtp"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
 )
+
+// headerInjectionPattern matches CRLF sequences that could be used for header injection
+var headerInjectionPattern = regexp.MustCompile(`[\r\n]`)
+
+// sanitizeHeader removes CRLF characters to prevent email header injection
+func sanitizeHeader(input string) string {
+	return headerInjectionPattern.ReplaceAllString(input, "")
+}
 
 // EmailService provides methods for sending emails and managing OTPs.
 type EmailService struct {
@@ -71,22 +80,29 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	}
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
+	// Sanitize inputs to prevent header injection
+	sanitizedSubject := sanitizeHeader(subject)
+	sanitizedTo := make([]string, len(to))
+	for i, addr := range to {
+		sanitizedTo[i] = sanitizeHeader(addr)
+	}
+
 	// Set up the message
 	var message string
 	if isHTML {
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
 			es.FromEmail,
-			Join(to, ", "),
-			subject,
+			Join(sanitizedTo, ", "),
+			sanitizedSubject,
 			body,
 		)
 	} else {
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
 			es.FromEmail,
-			Join(to, ", "),
-			subject,
+			Join(sanitizedTo, ", "),
+			sanitizedSubject,
 			body,
 		)
 	}
@@ -114,7 +130,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 		return err
 	}
 
-	for _, addr := range to {
+	for _, addr := range sanitizedTo {
 		if err = conn.Rcpt(addr); err != nil {
 			return err
 		}
