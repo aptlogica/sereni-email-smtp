@@ -1,12 +1,16 @@
 
 ## docker/Dockerfile
-FROM golang:1.24.4-alpine AS builder
+FROM golang:1.24.4-alpine@sha256:68932fa6d4d4059845c8f40ad7e654e626f3ebd3706eef7846f319293ab5cb7a AS builder
 
 # Install git (required for go modules)
 RUN apk add --no-cache git
 
-# Install swag CLI
-RUN go install github.com/swaggo/swag/cmd/swag@latest
+# Install swag CLI (pinned to v1.16.4 - commit 0b9e347c196710ea155a147782bf51707a600c2c)
+RUN git clone https://github.com/swaggo/swag.git /tmp/swag && \
+    cd /tmp/swag && \
+    git checkout 0b9e347c196710ea155a147782bf51707a600c2c && \
+    go install ./cmd/swag && \
+    rm -rf /tmp/swag
 
 WORKDIR /app
 
@@ -29,7 +33,7 @@ RUN cp /go/bin/swag /app/swag
 
 
 # Final stage
-FROM alpine:3.20
+FROM alpine:3.20@sha256:a4f4213abb84c497377b8544c81b3564f313746700372ec4fe84653e4fb03805
 
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates
