@@ -3,7 +3,7 @@
 > Enterprise-grade SMTP email service and open source email server for mission-critical applications. A comprehensive transactional email service and email delivery service providing reliable email sending, advanced queueing, retry mechanisms, and seamless cloud-native integration.
 
 [![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.23+-00ADD8?style=flat-square&logo=go)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.26.2-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Quality Gate Status](https://sonar.aptlogica.com/api/project_badges/measure?project=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a&metric=alert_status&token=sqb_152d71a0f9a3621514372a3e4c87460e3059bbc2)](https://sonar.aptlogica.com/dashboard?id=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a)
 
@@ -22,7 +22,7 @@
 - **Cloud-Native Ready**: Kubernetes deployment with horizontal scaling capabilities
 
 ## Architecture
-- Go 1.23+, idiomatic design
+- Go 1.26.2, idiomatic design
 - Modular, testable codebase
 
 ## Installation
