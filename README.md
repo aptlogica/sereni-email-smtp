@@ -1,11 +1,28 @@
-# sereni-email-smtp - Production-Grade SMTP Email Service
+<h1 align="center">sereni-email-smtp - Production-Grade SMTP Email Service</h1>
 
-> Enterprise-grade SMTP email service and open source email server for mission-critical applications. A comprehensive transactional email service and email delivery service providing reliable email sending, advanced queueing, retry mechanisms, and seamless cloud-native integration.
+<p align="center">Enterprise-grade SMTP email service and open source email server for mission-critical applications. A comprehensive transactional email service and email delivery service providing reliable email sending, advanced queueing, retry mechanisms, and seamless cloud-native integration.</p>
 
-[![Version](https://img.shields.io/badge/Version-1.0.0-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.26.2-00ADD8?style=flat-square&logo=go)](https://golang.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Quality Gate Status](https://sonar.aptlogica.com/api/project_badges/measure?project=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a&metric=alert_status&token=sqb_152d71a0f9a3621514372a3e4c87460e3059bbc2)](https://sonar.aptlogica.com/dashboard?id=aptlogica_sereni-email-smtp_81bfe731-8d64-4b02-a58c-81c48abd4f9a)
+<p align="center">
+<a href="LICENSE"><img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version"></a>
+<a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.26.2-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version"></a>
+<a href="https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol"><img src="https://img.shields.io/badge/SMTP-Protocol-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="SMTP"></a>
+<a href="https://gin-gonic.com/"><img src="https://img.shields.io/badge/Gin-Framework-008ECF?style=for-the-badge&logo=gin&logoColor=white" alt="Gin"></a>
+<a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>
+<a href="https://swagger.io/"><img src="https://img.shields.io/badge/Swagger-Documented-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="Swagger"></a>
+</p>
+
+<p align="center">
+<a href="https://github.com/aptlogica/sereni-email-smtp/actions/workflows/ci.yml"><img src="https://github.com/aptlogica/sereni-email-smtp/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+<a href="https://github.com/aptlogica/sereni-email-smtp/actions/workflows/codeql.yml"><img src="https://github.com/aptlogica/sereni-email-smtp/actions/workflows/codeql.yml/badge.svg" alt="CodeQL"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_sereni-email-smtp"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_sereni-email-smtp&metric=alert_status" alt="Quality Gate"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_sereni-email-smtp"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_sereni-email-smtp&metric=coverage" alt="Coverage"></a>
+<a href="https://sonarcloud.io/dashboard?id=aptlogica_sereni-email-smtp"><img src="https://sonarcloud.io/api/project_badges/measure?project=aptlogica_sereni-email-smtp&metric=security_rating" alt="Security"></a>
+</p>
+
+<p align="center">
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+</p>
+
 
 ## Overview
 

@@ -58,7 +58,7 @@ build: ## Build the application
 # Run tests
 test: ## Run all tests
 	@echo "${GREEN}Running tests...${NC}"
-	@powershell -Command "go test -v -race -coverprofile='$(COVER_PROFILE)' -covermode=atomic -coverpkg='./...' './tests/...'"
+	@powershell -Command "go test -v -race -coverprofile='$(COVER_PROFILE)' -covermode=atomic -coverpkg='./internal/...,./pkg/...' './tests/...'"
 	@echo "${GREEN}Tests completed!${NC}"
 
 # Run tests with coverage
