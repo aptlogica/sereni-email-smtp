@@ -22,6 +22,9 @@ var headerInjectionPattern = regexp.MustCompile(`[\r\n\x00]`)
 // bodyControlCharsPattern matches null bytes that enable content smuggling
 var bodyControlCharsPattern = regexp.MustCompile(`[\x00]`)
 
+// bodyControlCharsPattern matches control characters (CR, LF, null) that enable content smuggling
+var bodyControlCharsPattern = regexp.MustCompile(`[\r\n\x00]`)
+
 // sanitizeHeader removes CRLF characters to prevent email header injection
 func sanitizeHeader(input string) string {
 	return headerInjectionPattern.ReplaceAllString(input, "")
@@ -83,36 +86,43 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 }
 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
-	// If a SendEmailFunc is provided (tests), use it
-	if es.SendEmailFunc != nil {
-		return es.SendEmailFunc(to, subject, body, isHTML)
-	}
-	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
-
-	// Sanitize inputs to prevent header injection
+	// Sanitize inputs to prevent header injection - ALWAYS do this first
 	sanitizedSubject := sanitizeHeader(subject)
+	sanitizedBody := sanitizeBody(body)
 	sanitizedTo := make([]string, len(to))
 	for i, addr := range to {
 		sanitizedTo[i] = sanitizeHeader(addr)
 	}
+	// Sanitize FromEmail before SMTP envelope usage
+	sanitizedFrom := sanitizeHeader(es.FromEmail)
+	if sanitizedFrom == "" {
+		return fmt.Errorf("invalid or empty sender email after sanitization")
+	}
+
+	// If a SendEmailFunc is provided (tests), use it with sanitized inputs
+	if es.SendEmailFunc != nil {
+		return es.SendEmailFunc(sanitizedTo, sanitizedSubject, sanitizedBody, isHTML)
+	}
+
+	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
 	// Set up the message
 	var message string
 	if isHTML {
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
-			es.FromEmail,
+			sanitizedFrom,
 			Join(sanitizedTo, ", "),
 			sanitizedSubject,
-			body,
+			sanitizedBody,
 		)
 	} else {
 		message = fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
-			es.FromEmail,
+			sanitizedFrom,
 			Join(sanitizedTo, ", "),
 			sanitizedSubject,
-			body,
+			sanitizedBody,
 		)
 	}
 
@@ -135,7 +145,7 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	}
 
 	// Send email
-	if err = conn.Mail(es.FromEmail); err != nil {
+	if err = conn.Mail(sanitizedFrom); err != nil {
 		return err
 	}
 
@@ -217,6 +227,11 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 }
 
 func (es *EmailService) GenerateAndSendOTP(to string, expiryMinutes int) (string, error) {
+	// Validate email address before storing/sending
+	if !IsValidEmail(to) {
+		return "", fmt.Errorf("invalid email address")
+	}
+
 	// Generate random OTP
 	otp := GenerateOTP()
 
@@ -262,14 +277,16 @@ func (es *EmailService) VerifyOTP(email, otp string) bool {
 }
 
 func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
+	// Validate recipient list regardless of template usage
+	if !IsValidEmailList(request.To) {
+		return fmt.Errorf("invalid recipient email(s)")
+	}
+
 	// Process template if provided
 	subject := request.Subject
 	body := request.Body
 
 	if request.Template != "" {
-		if !IsValidEmailList(request.To) {
-			return fmt.Errorf("invalid recipient email(s)")
-		}
 		renderedSubject, renderedBody, err := es.RenderTemplate(request.Template, request.TemplateData)
 		if err != nil {
 			return fmt.Errorf("failed to render template: %w", err)
@@ -278,7 +295,11 @@ func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
 		body = renderedBody
 	}
 
-	return es.SendEmail(request.To, subject, body, request.IsHTML)
+	// Sanitize subject and body before passing to SendEmail
+	sanitizedSubject := sanitizeHeader(subject)
+	sanitizedBody := sanitizeBody(body)
+
+	return es.SendEmail(request.To, sanitizedSubject, sanitizedBody, request.IsHTML)
 }
 
 func (es *EmailService) cleanupExpiredOTPs() {

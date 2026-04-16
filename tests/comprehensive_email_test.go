@@ -2,8 +2,9 @@ package test
 
 import (
 	"errors"
-	"github.com/aptlogica/sereni-email-smtp/internal/email"
 	"testing"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
 )
 
 func TestGenerateOTP_Comprehensive(t *testing.T) {
@@ -217,16 +218,16 @@ func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 	}
 
 	// Test with invalid email
-	sentinelErr := errors.New("send failed for invalid recipient")
+	sentinelErr := errors.New("invalid email address")
 	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
-		return sentinelErr
+		return nil // Won't be called due to validation
 	}
 
 	_, err = service.GenerateAndSendOTP("invalid", 10)
 	if err == nil {
 		t.Error("Expected error for invalid email, got nil")
 	}
-	if err != sentinelErr {
+	if err.Error() != sentinelErr.Error() {
 		t.Errorf("Expected %v, got %v", sentinelErr, err)
 	}
 }
@@ -285,11 +286,14 @@ func TestSendTransactionalEmail_Comprehensive(t *testing.T) {
 		t.Errorf("Expected subject Test Subject, got %s", lastSubject)
 	}
 
-	// Test with invalid email (no template validation occurs)
+	// Test with invalid email (validation now occurs regardless of template)
 	req.To = []string{"invalid"}
 	err = service.SendTransactionalEmail(req)
-	if err != nil {
-		t.Errorf("Expected no error for invalid email without template, got %v", err)
+	if err == nil {
+		t.Error("Expected error for invalid email, got nil")
+	}
+	if err.Error() != "invalid recipient email(s)" {
+		t.Errorf("Expected 'invalid recipient email(s)' error, got %v", err)
 	}
 }
 

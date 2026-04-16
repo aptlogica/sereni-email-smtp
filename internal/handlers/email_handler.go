@@ -47,7 +47,16 @@ func (h *EmailHandler) SendEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	for i, to := range req.To {
+		req.To[i] = stripCRLF(to)
+	}
+	req.Subject = stripCRLF(req.Subject)
+	req.Body = strings.TrimSpace(req.Body)
 
+	if !email.IsValidEmailList(req.To) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid recipient email"})
+		return
+	}
 	err := h.Service.SendTransactionalEmail(&req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -80,6 +89,11 @@ func (h *EmailHandler) SendBulkEmail(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+	for i, r := range req.Recipients {
+		req.Recipients[i] = stripCRLF(r)
+	}
+	req.Subject = stripCRLF(req.Subject)
+	req.Body = strings.TrimSpace(req.Body)
 
 	failedEmails, err := h.Service.SendBulkEmail(req.Recipients, req.Subject, req.Body, req.IsHTML)
 	if err != nil {
@@ -118,6 +132,11 @@ func (h *EmailHandler) GenerateOTP(c *gin.Context) {
 	var req email.OTPRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	req.To = stripCRLF(req.To)
+	if !email.IsValidEmail(req.To) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid recipient email"})
 		return
 	}
 
