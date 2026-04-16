@@ -114,9 +114,14 @@ func TestEmailInjection_HeaderInjectionPrevention(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
+	// After sanitization, net/mail will typically remove the invalid parts or quote them
+	// In our case, it should at least remove the CRLF
 	if strings.Contains(capturedMessage, "\r") || strings.Contains(capturedMessage, "\n") {
 		t.Errorf("CRLF characters not sanitized from recipient: %s", capturedMessage)
 	}
+	// Note: net/mail.ParseAddress might return "<victim@example.comBcc:attacker@evil.com>"
+	// because it strips control characters via sanitizeHeader fallback if parsing fails,
+	// or it might just error. Our implementation currently falls back to sanitizeHeader if ParseAddress fails.
 }
 
 // TestEmailInjection_BodyControlCharactersPrevention tests that control characters in body are removed
@@ -136,9 +141,9 @@ func TestEmailInjection_BodyControlCharactersPrevention(t *testing.T) {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
 
-	// Body should have control characters removed
-	if strings.Contains(capturedBody, "\r") || strings.Contains(capturedBody, "\n") {
-		t.Errorf("CRLF characters not sanitized from body: %q", capturedBody)
+	// Body should have null bytes removed, but CRLF should REMAIN
+	if !strings.Contains(capturedBody, "\r\n") {
+		t.Errorf("CRLF characters SHOULD remain in body for multi-line support: %q", capturedBody)
 	}
 	if strings.Contains(capturedBody, "\x00") {
 		t.Errorf("Null bytes not sanitized from body: %q", capturedBody)
@@ -255,8 +260,11 @@ func TestEmailInjection_TransactionalEmailSanitization(t *testing.T) {
 	if strings.Contains(capturedSubject, "\r") || strings.Contains(capturedSubject, "\n") {
 		t.Errorf("Subject CRLF not sanitized: %q", capturedSubject)
 	}
-	if strings.Contains(capturedBody, "\r") || strings.Contains(capturedBody, "\n") || strings.Contains(capturedBody, "\x00") {
-		t.Errorf("Body control characters not sanitized: %q", capturedBody)
+	if !strings.Contains(capturedBody, "\r\n") {
+		t.Errorf("Body CRLF SHOULD remain for multi-line support: %q", capturedBody)
+	}
+	if strings.Contains(capturedBody, "\x00") {
+		t.Errorf("Body null bytes not sanitized: %q", capturedBody)
 	}
 }
 
