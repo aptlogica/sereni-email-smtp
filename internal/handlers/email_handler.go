@@ -91,10 +91,6 @@ func (h *EmailHandler) SendBulkEmail(c *gin.Context) {
 	}
 	for i, r := range req.Recipients {
 		req.Recipients[i] = stripCRLF(r)
-		if !email.IsValidEmail(req.Recipients[i]) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid recipient email"})
-			return
-		}
 	}
 	req.Subject = stripCRLF(req.Subject)
 	req.Body = strings.TrimSpace(req.Body)
