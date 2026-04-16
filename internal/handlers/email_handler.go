@@ -8,11 +8,19 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
 
 	"github.com/aptlogica/sereni-email-smtp/internal/email"
 
 	"github.com/gin-gonic/gin"
 )
+
+var handlerHeaderInjectionPattern = regexp.MustCompile(`[\r\n\x00]`)
+
+func stripCRLF(s string) string {
+	return handlerHeaderInjectionPattern.ReplaceAllString(strings.TrimSpace(s), "")
+}
 
 type EmailHandler struct {
 	Service *email.EmailService

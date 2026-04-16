@@ -16,12 +16,21 @@ import (
 	"time"
 )
 
-// headerInjectionPattern matches CRLF sequences that could be used for header injection
-var headerInjectionPattern = regexp.MustCompile(`[\r\n]`)
+// headerInjectionPattern matches CRLF sequences and null bytes that could be used for header injection
+var headerInjectionPattern = regexp.MustCompile(`[\r\n\x00]`)
+
+// bodyControlCharsPattern matches null bytes that enable content smuggling
+var bodyControlCharsPattern = regexp.MustCompile(`[\x00]`)
 
 // sanitizeHeader removes CRLF characters to prevent email header injection
 func sanitizeHeader(input string) string {
 	return headerInjectionPattern.ReplaceAllString(input, "")
+}
+
+// sanitizeBody removes null bytes that could enable content smuggling
+// while preserving normal message content (including newlines)
+func sanitizeBody(input string) string {
+	return bodyControlCharsPattern.ReplaceAllString(input, "")
 }
 
 // EmailService provides methods for sending emails and managing OTPs.
