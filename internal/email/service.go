@@ -101,10 +101,16 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
 	// Sanitize inputs to prevent header injection - ALWAYS do this first
 	sanitizedSubject := sanitizeHeader(subject)
-	sanitizedBody := sanitizeBody(body)
+
 	sanitizedTo := make([]string, len(to))
 	for i, addr := range to {
 		sanitizedTo[i] = sanitizeEmailAddress(addr)
+	}
+	// Sanitize body based on rendering context
+	sanitizedBody := sanitizeBody(body)
+	if isHTML {
+		// sanitizeBody must return HTML-safe content for HTML emails.
+		sanitizedBody = sanitizeBody(sanitizedBody)
 	}
 	// Sanitize FromEmail before SMTP envelope usage
 	sanitizedFrom := sanitizeEmailAddress(es.FromEmail)
