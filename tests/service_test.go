@@ -481,16 +481,16 @@ func TestVerifyOTP_DeletesAfterVerification(t *testing.T) {
 func TestGenerateAndSendOTP_InvalidEmail(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	sentinelErr := errors.New("send failed for invalid recipient")
+	sentinelErr := errors.New("invalid email address")
 	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
-		return sentinelErr
+		return nil // Won't be called due to validation
 	}
 
 	_, err := service.GenerateAndSendOTP("not-an-email", 10)
 	if err == nil {
 		t.Error("Expected error for invalid email, got nil")
 	}
-	if err != sentinelErr {
+	if err.Error() != sentinelErr.Error() {
 		t.Errorf("Expected %v, got %v", sentinelErr, err)
 	}
 }
