@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"net/mail"
 	"net/smtp"
 	"regexp"
 	"strings"
@@ -16,19 +17,34 @@ import (
 	"time"
 )
 
-// headerInjectionPattern matches CRLF sequences that could be used for header injection
-var headerInjectionPattern = regexp.MustCompile(`[\r\n]`)
+// headerInjectionPattern matches control characters that could be used for header injection
+var headerInjectionPattern = regexp.MustCompile(`[\x00-\x1F\x7F]`)
 
-// bodyControlCharsPattern matches control characters (CR, LF, null) that enable content smuggling
-var bodyControlCharsPattern = regexp.MustCompile(`[\r\n\x00]`)
+// bodyControlCharsPattern matches null bytes and other unsafe control characters
+// while allowing tab, regular newlines, and carriage returns
+var bodyControlCharsPattern = regexp.MustCompile(`[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]`)
 
-// sanitizeHeader removes CRLF characters to prevent email header injection
+// sanitizeHeader removes control characters to prevent email header injection
 func sanitizeHeader(input string) string {
 	return headerInjectionPattern.ReplaceAllString(input, "")
 }
 
-// sanitizeBody removes control characters (CR/LF/null) that could enable header/content smuggling
-// while preserving normal message content
+// sanitizeEmailAddress uses net/mail to ensure the address is safe and correctly formatted
+func sanitizeEmailAddress(input string) string {
+	addr, err := mail.ParseAddress(input)
+	if err != nil {
+		// If it's not a valid RFC 5322 address, fallback to a strict header sanitization
+		// but ideally this should have been caught by IsValidEmail
+		return sanitizeHeader(input)
+	}
+	if addr.Name == "" {
+		return addr.Address
+	}
+	return addr.String()
+}
+
+// sanitizeBody removes null bytes and other control characters that could enable smuggling
+// while preserving normal message content including newlines
 func sanitizeBody(input string) string {
 	return bodyControlCharsPattern.ReplaceAllString(input, "")
 }
@@ -88,10 +104,10 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	sanitizedBody := sanitizeBody(body)
 	sanitizedTo := make([]string, len(to))
 	for i, addr := range to {
-		sanitizedTo[i] = sanitizeHeader(addr)
+		sanitizedTo[i] = sanitizeEmailAddress(addr)
 	}
 	// Sanitize FromEmail before SMTP envelope usage
-	sanitizedFrom := sanitizeHeader(es.FromEmail)
+	sanitizedFrom := sanitizeEmailAddress(es.FromEmail)
 	if sanitizedFrom == "" {
 		return fmt.Errorf("invalid or empty sender email after sanitization")
 	}
