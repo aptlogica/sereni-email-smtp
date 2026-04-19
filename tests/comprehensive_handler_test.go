@@ -1,5 +1,5 @@
-// Copyright (c) 2026 Aptlogica Technologies Private Limited
-// SPDX-License-Identifier: MIT
+// Copyright 2026-2030 Aptlogica Technologies Pvt Ltd
+// Licensed under the Apache License, Version 2.0
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
 
@@ -9,11 +9,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"github.com/aptlogica/sereni-email-smtp/internal/email"
-	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/aptlogica/sereni-email-smtp/internal/email"
+	"github.com/aptlogica/sereni-email-smtp/internal/handlers"
 
 	"github.com/gin-gonic/gin"
 )
@@ -178,11 +179,11 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 			"expiry": 10,
 		}
 
-	body, _ := json.Marshal(req)
-	w := httptest.NewRecorder()
-	c, _ := gin.CreateTestContext(w)
-	c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
-	c.Request.Header.Set("Content-Type", "application/json")
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest("POST", "/", bytes.NewBuffer(body))
+		c.Request.Header.Set("Content-Type", "application/json")
 
 		handler.GenerateOTP(c)
 

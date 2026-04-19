@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-<a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License"></a>
+<a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
 </p>
 
 
@@ -142,7 +142,7 @@ go run ./cmd/server
 See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## License
-MIT License. Copyright (c) 2026 Aptlogica Technologies.
+Apache License 2.0. Copyright (c) 2026 Aptlogica Technologies.
 
 ## API Documentation
 
