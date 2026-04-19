@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Aptlogica Technologies Private Limited
+// Copyright 2026-2030 Aptlogica Technologies Pvt Ltd
 // Licensed under the Apache License, Version 2.0
 // Websites: https://www.aptlogica.com | https://www.serenibase.com
 // Support: support@aptlogica.com | support@serenibase.com
@@ -6,10 +6,11 @@
 package test
 
 import (
-	"github.com/aptlogica/sereni-email-smtp/pkg/middleware"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/aptlogica/sereni-email-smtp/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )
