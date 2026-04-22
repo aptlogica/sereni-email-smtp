@@ -28,6 +28,7 @@
 
 **sereni-email-smtp** is an open-source, self-hosted SMTP email service and developer email API built for backend applications. It enables reliable delivery of transactional emails such as verification emails, password resets, alerts, and notifications using queueing, retry logic, and observability features. Designed for scalability and flexibility, it integrates easily with REST APIs, microservices, and popular SMTP providers like Gmail, SendGrid, and Mailgun.
 
+sereni-email-smtp runs on <code>:8082</code> as part of the SereniBase backend platform. SereniBase uses this service for user registration emails, password resets, and workflow notifications. See <a href="https://github.com/aptlogica/sereni-base">sereni-base</a> to deploy the full stack.</p>
 ## Key Features
 
 - **Enterprise SMTP Service**: High-throughput email delivery with advanced error handling
@@ -124,14 +125,56 @@ SMTP_PASSWORD=your-app-password
 REDIS_URL=redis://localhost:6379
 PORT=8080
 LOG_LEVEL=debug
+
+# Queue & retry settings
+# Maximum times a message will be retried before moving to dead-letter queue
+MAX_RETRY_ATTEMPTS=3
+# Base backoff in seconds used for exponential backoff between retries
+RETRY_BACKOFF_SECONDS=30
+# Number of consecutive failures before a circuit breaker trips
+CIRCUIT_BREAKER_THRESHOLD=5
+# Dead letter queue name (Redis key / stream / list depending on implementation)
+DEAD_LETTER_QUEUE=sereni:email:dlq
+
+# Priority queue names
+EMAIL_PRIORITY_HIGH=sereni:email:high
+EMAIL_PRIORITY_NORMAL=sereni:email:normal
 ```
 
 ### Docker Development
-```bash
-# Start with dependencies
-docker-compose up -d redis
 
-# Run the service
+Use the example `docker-compose.yml` below to run Redis and the email service together. The `email` service is configured to connect to Redis using `REDIS_URL=redis://redis:6379` and exposes port `8082`.
+
+```yaml
+version: "3.8"
+services:
+    redis:
+        image: redis:7-alpine
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis-data:/data
+
+    email:
+        build: .
+        environment:
+            - REDIS_URL=redis://redis:6379
+            - PORT=8082
+            - LOG_LEVEL=debug
+        ports:
+            - "8082:8082"
+        depends_on:
+            - redis
+
+volumes:
+    redis-data:
+```
+
+Start the stack:
+
+```bash
+docker-compose up -d
+# Run the service locally (or build the image to run the `email` service)
 go run ./cmd/server
 ```
 
