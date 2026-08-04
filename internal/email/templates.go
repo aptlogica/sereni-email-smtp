@@ -125,6 +125,16 @@ func (es *EmailService) RenderTemplate(templateName string, data map[string]inte
 		return "", "", errors.New("template not found: " + templateName)
 	}
 
+	// SECURITY: Sanitize template data to prevent XSS and URL injection attacks
+	es.mutex.RLock()
+	trustedConfig := es.TrustedDomainConfig
+	es.mutex.RUnlock()
+	
+	sanitizedData, err := SanitizeTemplateData(data, trustedConfig)
+	if err != nil {
+		return "", "", fmt.Errorf("template data validation failed: %w", err)
+	}
+
 	// Get parsed HTML template from cache or parse and store
 	htmlTmpl, ok := tmplCache.Get(templateName + ":html")
 	if !ok {
@@ -135,7 +145,7 @@ func (es *EmailService) RenderTemplate(templateName string, data map[string]inte
 		}
 	}
 	var htmlBuf bytes.Buffer
-	if err := htmlTmpl.Execute(&htmlBuf, data); err != nil {
+	if err := htmlTmpl.Execute(&htmlBuf, sanitizedData); err != nil {
 		return "", "", fmt.Errorf("error executing HTML body: %w", err)
 	}
 
@@ -149,7 +159,7 @@ func (es *EmailService) RenderTemplate(templateName string, data map[string]inte
 		}
 	}
 	var subjBuf bytes.Buffer
-	if err := subjTmpl.Execute(&subjBuf, data); err != nil {
+	if err := subjTmpl.Execute(&subjBuf, sanitizedData); err != nil {
 		return "", "", fmt.Errorf("error executing subject: %w", err)
 	}
 

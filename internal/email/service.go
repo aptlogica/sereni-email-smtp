@@ -59,6 +59,8 @@ type EmailService struct {
 	otpStore      map[string]OTPEntry
 	mutex         sync.RWMutex
 	BulkBatchSize int
+	// TrustedDomainConfig for URL validation in templates
+	TrustedDomainConfig *TrustedDomainConfig
 	// SendEmailFunc, if set, will be used instead of the real SMTP send flow.
 	SendEmailFunc func(to []string, subject, body string, isHTML bool) error
 	// SendBulkEmailFunc allows overriding bulk send behavior in tests.
@@ -78,13 +80,14 @@ type OTPEntry struct {
 // NewEmailService creates a new EmailService instance with the given SMTP configuration and batch size.
 func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, fromEmail string, batchSize int) *EmailService {
 	service := &EmailService{
-		SMTPHost:      smtpHost,
-		SMTPPort:      smtpPort,
-		SMTPUsername:  smtpUsername,
-		SMTPPassword:  smtpPassword,
-		FromEmail:     fromEmail,
-		otpStore:      make(map[string]OTPEntry),
-		BulkBatchSize: batchSize,
+		SMTPHost:            smtpHost,
+		SMTPPort:            smtpPort,
+		SMTPUsername:        smtpUsername,
+		SMTPPassword:        smtpPassword,
+		FromEmail:           fromEmail,
+		otpStore:            make(map[string]OTPEntry),
+		BulkBatchSize:       batchSize,
+		TrustedDomainConfig: DefaultTrustedDomainConfig(), // Use secure defaults
 	}
 
 	// Default Dial uses smtp.Dial
@@ -96,6 +99,17 @@ func NewEmailService(smtpHost string, smtpPort int, smtpUsername, smtpPassword, 
 	go service.cleanupExpiredOTPs()
 
 	return service
+}
+
+// SetTrustedDomains configures the list of trusted domains for URL validation
+func (es *EmailService) SetTrustedDomains(domains []string, allowHTTP bool) {
+	es.mutex.Lock()
+	defer es.mutex.Unlock()
+	es.TrustedDomainConfig = &TrustedDomainConfig{
+		TrustedDomains: domains,
+		AllowHTTPS:     true,
+		AllowHTTP:      allowHTTP,
+	}
 }
 
 func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
