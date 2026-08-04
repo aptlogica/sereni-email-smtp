@@ -36,6 +36,11 @@ sereni-email-smtp runs on <code>:8082</code> as part of the SereniBase backend p
 - **Retry Logic**: Configurable retry strategies with exponential backoff and circuit breakers
 - **Comprehensive Monitoring**: Detailed metrics, logging, and observability dashboards
 - **Security First**: Secure credential management, TLS enforcement, and audit logging
+  - 🔒 **Host Header Injection Prevention**: Protects against account takeover via malicious URLs
+  - 🔒 **Trusted Domain Validation**: URL whitelisting with subdomain support
+  - 🔒 **XSS Protection**: Automatic HTML escaping and content sanitization
+  - 🔒 **HTTPS Enforcement**: Configurable HTTPS-only mode for email links
+  - 🔒 **Input Sanitization**: Comprehensive validation of all email data
 - **SMTP Mail Service**: Complete email integration service with SMTP email toolkit support
 - **Cloud-Native Ready**: Kubernetes deployment with horizontal scaling capabilities
 
@@ -180,9 +185,82 @@ go run ./cmd/server
 
 ## Testing
 - Run `go test ./...` to execute unit tests
+- Run `go test ./tests -run TestSanitize -v` for security tests
 
 ## Security
-See [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+
+### Security Features
+
+This service includes comprehensive security protections against email-related vulnerabilities:
+
+- **Host Header Injection Prevention**: Prevents attackers from inserting malicious domains into password reset and verification emails
+- **URL Validation**: All URLs in email templates are validated against a trusted domain whitelist
+- **XSS Protection**: Automatic HTML escaping of user input to prevent cross-site scripting
+- **HTTPS Enforcement**: Option to require HTTPS for all email links
+- **Input Sanitization**: All email headers, subjects, and bodies are sanitized
+
+### Secure Usage
+
+Configure trusted domains before sending emails:
+
+```go
+import "github.com/aptlogica/sereni-email-smtp/internal/email"
+
+// Initialize email service
+emailService := email.NewEmailService(
+    smtpHost, smtpPort,
+    smtpUser, smtpPass,
+    fromEmail, batchSize,
+)
+
+// Configure trusted domains (required for URLs in emails)
+emailService.SetTrustedDomains(
+    []string{"example.com", "app.example.com"},
+    false, // disallow HTTP - HTTPS only
+)
+
+// Safe: URL from configuration is validated
+baseURL := os.Getenv("BASE_URL") // https://example.com
+resetURL := baseURL + "/reset?token=" + token
+
+emailService.SendTemplateEmail(
+    []string{"user@example.com"},
+    "password_reset",
+    map[string]interface{}{
+        "reset_url": resetURL, // ✅ Validated against trusted domains
+    },
+)
+```
+
+### Important Security Notes
+
+⚠️ **Never use HTTP Host headers to construct email URLs:**
+
+```go
+// ❌ VULNERABLE - Do not do this
+host := r.Header.Get("Host") // Attacker controlled!
+resetURL := "https://" + host + "/reset?token=" + token
+
+// ✅ SECURE - Use configuration instead
+baseURL := os.Getenv("BASE_URL") // From trusted config
+resetURL := baseURL + "/reset?token=" + token
+```
+
+### Security Documentation
+
+- **[Security Guide](docs/SECURITY_GUIDE.md)**: Comprehensive security best practices and examples
+- **[Security Implementation](docs/SECURITY_IMPLEMENTATION.md)**: Technical details of security features
+- **[Secure Example](examples/secure-auth/)**: Working example of secure authentication flow
+- **[Vulnerability Reporting](SECURITY.md)**: How to report security issues
+
+### Security Compliance
+
+This implementation addresses:
+- **CWE-640**: Weak Password Recovery Mechanism
+- **CWE-79**: Cross-site Scripting (XSS)
+- **CWE-601**: URL Redirection to Untrusted Site
+- **OWASP**: Email Header Injection
+- **OWASP**: Content Spoofing
 
 ## License
 Apache License 2.0. Copyright (c) 2026 Aptlogica Technologies.
