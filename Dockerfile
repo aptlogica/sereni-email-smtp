@@ -1,6 +1,6 @@
 
 ## docker/Dockerfile
-FROM golang:1.26.5-alpine3.24 AS builder
+FROM golang:1.26.5-alpine3.24@sha256:111d79159b2326f7e80c4a4706e1ba166acb0e2611df853955f3621828cd49e8 AS builder
 RUN go version
 
 # Install git (required for go modules)
