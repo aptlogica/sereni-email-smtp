@@ -49,6 +49,30 @@ func sanitizeBody(input string) string {
 	return bodyControlCharsPattern.ReplaceAllString(input, "")
 }
 
+// verifySanitizedForSMTP is a fail-closed gate applied immediately before an SMTP
+// message is assembled. Sanitization elsewhere strips unsafe characters, but this
+// re-checks the values that will actually be written to the wire and refuses to
+// proceed if any header field still contains a control character (e.g. CR/LF, which
+// would allow injecting extra headers or SMTP commands) or the body still contains
+// any control character other than the newlines it is intentionally allowed to carry.
+func verifySanitizedForSMTP(from string, to []string, subject, body string) error {
+	if headerInjectionPattern.MatchString(from) {
+		return fmt.Errorf("sanitization check failed: sender contains illegal control characters")
+	}
+	if headerInjectionPattern.MatchString(subject) {
+		return fmt.Errorf("sanitization check failed: subject contains illegal control characters")
+	}
+	for _, addr := range to {
+		if headerInjectionPattern.MatchString(addr) {
+			return fmt.Errorf("sanitization check failed: recipient contains illegal control characters")
+		}
+	}
+	if bodyControlCharsPattern.MatchString(body) {
+		return fmt.Errorf("sanitization check failed: body contains illegal control characters")
+	}
+	return nil
+}
+
 // EmailService provides methods for sending emails and managing OTPs.
 type EmailService struct {
 	SMTPHost      string
@@ -116,6 +140,13 @@ func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool
 	// Sanitize inputs to prevent header injection - ALWAYS do this first
 	sanitizedTo, sanitizedSubject, sanitizedBody, sanitizedFrom, err := prepareSanitizedEmail(es.FromEmail, to, subject, body, isHTML)
 	if err != nil {
+		return err
+	}
+
+	// SECURITY: fail closed if sanitization somehow left unsafe control characters
+	// in place. This is a hard gate immediately before the SMTP message is built,
+	// not just a best-effort cleanup, so no unsanitized content can reach the wire.
+	if err := verifySanitizedForSMTP(sanitizedFrom, sanitizedTo, sanitizedSubject, sanitizedBody); err != nil {
 		return err
 	}
 
