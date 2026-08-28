@@ -110,6 +110,27 @@ func TestSanitizeURL(t *testing.T) {
 			expectError: false,
 			description: "Should accept URL with port from trusted domain",
 		},
+		{
+			name:        "Unparseable URL",
+			url:         "http://example.com/%zz",
+			config:      nil,
+			expectError: true,
+			description: "Should reject URLs that fail to parse (invalid escape sequence)",
+		},
+		{
+			name:        "URL with empty hostname",
+			url:         "https:///path",
+			config:      nil,
+			expectError: true,
+			description: "Should reject URLs without a hostname",
+		},
+		{
+			name:        "Reject HTTPS URL when explicitly disallowed",
+			url:         "https://example.com/secure",
+			config:      &email.TrustedDomainConfig{AllowHTTPS: false, AllowHTTP: true},
+			expectError: true,
+			description: "Should reject HTTPS URLs when config disallows HTTPS",
+		},
 	}
 
 	for _, tt := range tests {
@@ -224,6 +245,27 @@ func TestSanitizeTemplateData(t *testing.T) {
 			expectError: false,
 			description: "Should accept safe numeric and boolean values",
 		},
+		{
+			name: "Nested template data with malicious URL",
+			data: map[string]interface{}{
+				"user": map[string]interface{}{
+					"name":      "John",
+					"reset_url": "javascript:alert('XSS')",
+				},
+			},
+			config:      nil,
+			expectError: true,
+			description: "Should propagate errors from nested maps",
+		},
+		{
+			name: "Unsupported value type",
+			data: map[string]interface{}{
+				"tags": []string{"a", "b"},
+			},
+			config:      nil,
+			expectError: false,
+			description: "Should stringify and escape unsupported value types",
+		},
 	}
 
 	for _, tt := range tests {
@@ -236,6 +278,16 @@ func TestSanitizeTemplateData(t *testing.T) {
 				t.Errorf("%s: unexpected error: %v", tt.description, err)
 			}
 		})
+	}
+}
+
+func TestSanitizeTemplateDataNilInput(t *testing.T) {
+	result, err := email.SanitizeTemplateData(nil, nil)
+	if err != nil {
+		t.Fatalf("expected no error for nil data, got: %v", err)
+	}
+	if result != nil {
+		t.Errorf("expected nil result for nil data, got: %v", result)
 	}
 }
 
