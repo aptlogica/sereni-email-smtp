@@ -8,6 +8,7 @@ package email
 import (
 	"crypto/tls"
 	"fmt"
+	"html"
 	"io"
 	"net/mail"
 	"net/smtp"
@@ -186,11 +187,14 @@ func prepareSanitizedEmail(fromEmail string, to []string, subject, body string, 
 		sanitizedTo[i] = sanitizeEmailAddress(addr)
 	}
 
-	// Sanitize body based on rendering context
+	// Sanitize body based on rendering context.
+	// The message is ultimately written as raw SMTP content, so both HTML and
+	// plain-text bodies must be neutralized before assembly.
 	sanitizedBody = sanitizeBody(body)
 	if isHTML {
-		// sanitizeBody must return HTML-safe content for HTML emails.
-		sanitizedBody = sanitizeBody(sanitizedBody)
+		sanitizedBody = SanitizeHTMLContent(sanitizedBody)
+	} else {
+		sanitizedBody = html.EscapeString(sanitizedBody)
 	}
 
 	// Sanitize FromEmail before SMTP envelope usage
