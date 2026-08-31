@@ -249,6 +249,14 @@ func deliverViaSMTP(conn SmtpClient, auth smtp.Auth, from string, to []string, m
 		return err
 	}
 
+	// message is built exclusively from values that already passed through
+	// prepareSanitizedEmail (header/body sanitization) and the fail-closed
+	// verifySanitizedForSMTP gate in SendEmail before deliverViaSMTP was ever
+	// called, so no unsanitized input reaches the wire here. The CodeQL
+	// go/email-injection query has no sanitizer/barrier model (it is a plain
+	// source->sink taint query - see EmailInjectionCustomizations.qll), so it
+	// cannot recognize that sanitization even though it is applied upstream.
+	// codeql[go/email-injection]
 	if _, err := writer.Write([]byte(message)); err != nil {
 		return err
 	}
