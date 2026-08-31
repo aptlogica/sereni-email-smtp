@@ -297,6 +297,58 @@ func TestSendEmail_SuccessResponseBody(t *testing.T) {
 	}
 }
 
+func TestSendEmail_InvalidRecipientReturns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	h := handlers.NewEmailHandler(es)
+
+	tr := email.EmailRequest{To: []string{"not-an-email"}, Subject: "s", Body: "b"}
+	tb, _ := json.Marshal(tr)
+	req := httptest.NewRequest("POST", "/", bytes.NewBuffer(tb))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+	h.SendEmail(c)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 got %d", recorder.Code)
+	}
+	var resp map[string]interface{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["error"] == "" {
+		t.Fatalf("expected error message in response")
+	}
+}
+
+func TestGenerateOTP_InvalidRecipientReturns400(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	recorder := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(recorder)
+	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	h := handlers.NewEmailHandler(es)
+
+	reqBody := map[string]interface{}{"to": "not-an-email"}
+	b, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/", bytes.NewBuffer(b))
+	req.Header.Set("Content-Type", "application/json")
+	c.Request = req
+	h.GenerateOTP(c)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400 got %d", recorder.Code)
+	}
+	var resp map[string]interface{}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	if resp["error"] == "" {
+		t.Fatalf("expected error message in response")
+	}
+}
+
 func TestSendBulkEmail_ServiceErrorReturns500(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	recorder := httptest.NewRecorder()

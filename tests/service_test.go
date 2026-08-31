@@ -318,6 +318,48 @@ func TestSendEmail_SanitizationCRLF(t *testing.T) {
 	}
 }
 
+// TestSendEmail_FromAddressWithDisplayName tests that a From address containing
+// a display name is preserved (quoted) rather than collapsed to the bare address.
+func TestSendEmail_FromAddressWithDisplayName(t *testing.T) {
+	service := email.NewEmailService("localhost", 587, "user", "pass", "Test User <from@test.com>", 5)
+
+	mockWriter := &MockWriter{}
+	mockClient := &MockSmtpClient{
+		DataWriter: mockWriter,
+	}
+
+	service.Dial = func(addr string) (email.SmtpClient, error) {
+		return mockClient, nil
+	}
+
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	if err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	capturedMessage := string(mockWriter.written)
+	if !containsStr(capturedMessage, `From: "Test User" <from@test.com>`) {
+		t.Errorf("Expected From header to preserve display name, got: %s", capturedMessage)
+	}
+}
+
+// TestNewEmailService_DefaultDial tests that the default Dial function assigned by
+// NewEmailService delegates to a real SMTP dial rather than being left nil.
+func TestNewEmailService_DefaultDial(t *testing.T) {
+	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+
+	if service.Dial == nil {
+		t.Fatal("Expected default Dial to be set")
+	}
+
+	// Dialing a refused loopback port exercises the default implementation
+	// without depending on a real SMTP server.
+	_, err := service.Dial("127.0.0.1:1")
+	if err == nil {
+		t.Error("Expected error dialing an unreachable address")
+	}
+}
+
 // TestSendEmail_MultipleRecipients tests SendEmail with multiple recipients
 func TestSendEmail_MultipleRecipients(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
