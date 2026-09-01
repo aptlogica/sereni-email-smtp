@@ -4,7 +4,7 @@
 
 <p align="center">
 <a href="LICENSE"><img src="https://img.shields.io/badge/Version-1.0.0-blue?style=for-the-badge" alt="Version"></a>
-<a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.26.2-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version"></a>
+<a href="https://golang.org"><img src="https://img.shields.io/badge/Go-1.26.5-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go Version"></a>
 <a href="https://en.wikipedia.org/wiki/Simple_Mail_Transfer_Protocol"><img src="https://img.shields.io/badge/SMTP-Protocol-EA4335?style=for-the-badge&logo=gmail&logoColor=white" alt="SMTP"></a>
 <a href="https://gin-gonic.com/"><img src="https://img.shields.io/badge/Gin-Framework-008ECF?style=for-the-badge&logo=gin&logoColor=white" alt="Gin"></a>
 <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"></a>
@@ -45,7 +45,7 @@ sereni-email-smtp runs on <code>:8082</code> as part of the SereniBase backend p
 - **Cloud-Native Ready**: Kubernetes deployment with horizontal scaling capabilities
 
 ## Architecture
-- Go 1.26.2, idiomatic design
+- Go 1.26.5, idiomatic design
 - Modular, testable codebase
 
 ## Installation
