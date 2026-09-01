@@ -585,8 +585,8 @@ func TestSendTransactionalEmail_WithTemplate(t *testing.T) {
 		t.Error("Expected SendEmail to be called")
 	}
 
-	if capturedSubject != "Welcome to Our Service!" {
-		t.Errorf("Expected subject 'Welcome to Our Service!', got %s", capturedSubject)
+	if capturedSubject != "Welcome to Sereni LRS" {
+		t.Errorf("Expected subject 'Welcome to Sereni LRS', got %s", capturedSubject)
 	}
 }
 
@@ -639,8 +639,8 @@ func TestSendTemplateEmail(t *testing.T) {
 	sendCalled := false
 	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
 		sendCalled = true
-		if subject != "Your Verification Code" {
-			t.Errorf("Expected subject 'Your Verification Code', got %s", subject)
+		if subject != "Your Sereni LRS verification code" {
+			t.Errorf("Expected subject 'Your Sereni LRS verification code', got %s", subject)
 		}
 		if !containsStr(body, "123456") {
 			t.Error("Expected OTP code in body")

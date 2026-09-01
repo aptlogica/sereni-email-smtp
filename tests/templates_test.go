@@ -21,8 +21,8 @@ func TestRenderTemplate_Basic(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if subject != "Welcome to Our Service!" {
-		t.Errorf("Expected subject 'Welcome to Our Service!', got %s", subject)
+	if subject != "Welcome to Sereni LRS" {
+		t.Errorf("Expected subject 'Welcome to Sereni LRS', got %s", subject)
 	}
 
 	if !strings.Contains(body, "Alice") {
@@ -82,8 +82,8 @@ func TestRenderTemplate_EmptyData(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if subject != "Welcome to Our Service!" {
-		t.Errorf("Expected subject 'Welcome to Our Service!', got %s", subject)
+	if subject != "Welcome to Sereni LRS" {
+		t.Errorf("Expected subject 'Welcome to Sereni LRS', got %s", subject)
 	}
 
 	if body == "" {
@@ -166,7 +166,7 @@ func TestAddTemplate_Override(t *testing.T) {
 
 	// Get original welcome template
 	originalWelcome, _ := service.GetTemplate("welcome")
-	if originalWelcome.Subject != "Welcome to Our Service!" {
+	if originalWelcome.Subject != "Welcome to Sereni LRS" {
 		t.Error("Expected original welcome template")
 	}
 
@@ -206,8 +206,8 @@ func TestGetTemplate_Existing(t *testing.T) {
 		t.Error("Expected password_reset template to exist")
 	}
 
-	if template.Subject != "Password Reset Request" {
-		t.Errorf("Expected 'Password Reset Request', got %s", template.Subject)
+	if template.Subject != "Reset your Sereni LRS password" {
+		t.Errorf("Expected 'Reset your Sereni LRS password', got %s", template.Subject)
 	}
 }
 
