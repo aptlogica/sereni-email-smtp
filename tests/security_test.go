@@ -151,6 +151,29 @@ func TestEmailInjection_BodyControlCharactersPrevention(t *testing.T) {
 	// After sanitization, "Bcc:" text may remain but without CRLF it's harmless
 }
 
+func TestEmailInjection_HTMLBodyXSSPrevention(t *testing.T) {
+	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
+
+	var capturedBody string
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+		capturedBody = body
+		return nil
+	}
+
+	maliciousHTMLBody := "<p>Hello</p><img src='x' onerror='alert(1)'><script>alert('xss')</script>"
+	err := service.SendEmail([]string{"victim@example.com"}, "Subject", maliciousHTMLBody, true)
+	if err != nil {
+		t.Fatalf("SendEmail failed: %v", err)
+	}
+
+	if strings.Contains(capturedBody, "<script") || strings.Contains(strings.ToLower(capturedBody), "onerror=") {
+		t.Fatalf("HTML body was not sanitized before sending: %q", capturedBody)
+	}
+	if !strings.Contains(capturedBody, "Hello") {
+		t.Fatalf("Safe content was lost during sanitization: %q", capturedBody)
+	}
+}
+
 // TestEmailInjection_FromEmailSanitization tests that FromEmail is sanitized
 func TestEmailInjection_FromEmailSanitization(t *testing.T) {
 	// Service with malicious FromEmail

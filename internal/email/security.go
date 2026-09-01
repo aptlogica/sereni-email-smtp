@@ -63,20 +63,12 @@ func SanitizeURL(rawURL string, config *TrustedDomainConfig) (string, error) {
 		config = DefaultTrustedDomainConfig()
 	}
 
-	// Check allowed schemes
-	if parsedURL.Scheme == "https" && !config.AllowHTTPS {
-		return "", errors.New("HTTPS URLs are not allowed")
-	}
-	if parsedURL.Scheme == "http" && !config.AllowHTTP {
-		return "", errors.New("HTTP URLs are not allowed (use HTTPS)")
-	}
-	if parsedURL.Scheme != "http" && parsedURL.Scheme != "https" {
-		return "", fmt.Errorf("unsupported URL scheme: %s (only http/https allowed)", parsedURL.Scheme)
+	if err := validateURLScheme(parsedURL.Scheme, config); err != nil {
+		return "", err
 	}
 
 	// Check for javascript: or data: schemes in any part
-	if strings.Contains(strings.ToLower(rawURL), "javascript:") ||
-		strings.Contains(strings.ToLower(rawURL), "data:") {
+	if containsMaliciousScheme(rawURL) {
 		return "", errors.New("potentially malicious URL detected")
 	}
 
@@ -86,20 +78,8 @@ func SanitizeURL(rawURL string, config *TrustedDomainConfig) (string, error) {
 	}
 
 	// If trusted domains are configured, validate against them
-	if len(config.TrustedDomains) > 0 {
-		hostname := strings.ToLower(parsedURL.Hostname())
-		trusted := false
-		for _, domain := range config.TrustedDomains {
-			domain = strings.ToLower(strings.TrimSpace(domain))
-			// Allow exact match or subdomain match
-			if hostname == domain || strings.HasSuffix(hostname, "."+domain) {
-				trusted = true
-				break
-			}
-		}
-		if !trusted {
-			return "", fmt.Errorf("URL domain '%s' is not in the trusted domains list", parsedURL.Hostname())
-		}
+	if err := validateTrustedDomain(parsedURL, config); err != nil {
+		return "", err
 	}
 
 	// Additional XSS checks
@@ -111,6 +91,47 @@ func SanitizeURL(rawURL string, config *TrustedDomainConfig) (string, error) {
 	return parsedURL.String(), nil
 }
 
+// validateURLScheme checks that the scheme is http/https and allowed by config
+func validateURLScheme(scheme string, config *TrustedDomainConfig) error {
+	if scheme == "https" && !config.AllowHTTPS {
+		return errors.New("HTTPS URLs are not allowed")
+	}
+	if scheme == "http" && !config.AllowHTTP {
+		return errors.New("HTTP URLs are not allowed (use HTTPS)")
+	}
+	if scheme != "http" && scheme != "https" {
+		return fmt.Errorf("unsupported URL scheme: %s (only http/https allowed)", scheme)
+	}
+	return nil
+}
+
+// containsMaliciousScheme reports whether the raw URL contains a javascript: or data: scheme
+func containsMaliciousScheme(rawURL string) bool {
+	lower := strings.ToLower(rawURL)
+	return strings.Contains(lower, "javascript:") || strings.Contains(lower, "data:")
+}
+
+// validateTrustedDomain checks the parsed URL's hostname against the configured trusted domains
+func validateTrustedDomain(parsedURL *url.URL, config *TrustedDomainConfig) error {
+	if len(config.TrustedDomains) == 0 {
+		return nil
+	}
+
+	hostname := strings.ToLower(parsedURL.Hostname())
+	for _, domain := range config.TrustedDomains {
+		domain = strings.ToLower(strings.TrimSpace(domain))
+		// Allow exact match or subdomain match
+		if hostname == domain || strings.HasSuffix(hostname, "."+domain) {
+			return nil
+		}
+	}
+
+	return fmt.Errorf("URL domain '%s' is not in the trusted domains list", parsedURL.Hostname())
+}
+
+// templateURLFieldKeys are the key substrings used to identify URL fields in template data
+var templateURLFieldKeys = []string{"url", "link", "reset_url", "verification_url", "callback_url", "redirect_url"}
+
 // SanitizeTemplateData validates and sanitizes all data in template data map
 // This prevents XSS and injection attacks in email templates
 func SanitizeTemplateData(data map[string]interface{}, config *TrustedDomainConfig) (map[string]interface{}, error) {
@@ -119,50 +140,58 @@ func SanitizeTemplateData(data map[string]interface{}, config *TrustedDomainConf
 	}
 
 	sanitized := make(map[string]interface{})
-	urlKeys := []string{"url", "link", "reset_url", "verification_url", "callback_url", "redirect_url"}
 
 	for key, value := range data {
-		// Check if this is a URL field
-		isURLField := false
-		keyLower := strings.ToLower(key)
-		for _, urlKey := range urlKeys {
-			if strings.Contains(keyLower, urlKey) {
-				isURLField = true
-				break
-			}
+		sanitizedValue, err := sanitizeTemplateValue(key, value, config)
+		if err != nil {
+			return nil, err
 		}
-
-		// Handle different value types
-		switch v := value.(type) {
-		case string:
-			if isURLField {
-				// Validate and sanitize URL
-				sanitizedURL, err := SanitizeURL(v, config)
-				if err != nil {
-					return nil, fmt.Errorf("invalid URL in field '%s': %w", key, err)
-				}
-				sanitized[key] = sanitizedURL
-			} else {
-				// For non-URL strings, HTML escape to prevent XSS
-				sanitized[key] = html.EscapeString(v)
-			}
-		case int, int64, float64, bool:
-			// Numeric and boolean types are safe
-			sanitized[key] = v
-		case map[string]interface{}:
-			// Recursively sanitize nested maps
-			nestedSanitized, err := SanitizeTemplateData(v, config)
-			if err != nil {
-				return nil, fmt.Errorf("error sanitizing nested field '%s': %w", key, err)
-			}
-			sanitized[key] = nestedSanitized
-		default:
-			// For other types, convert to string and escape
-			sanitized[key] = html.EscapeString(fmt.Sprintf("%v", v))
-		}
+		sanitized[key] = sanitizedValue
 	}
 
 	return sanitized, nil
+}
+
+// sanitizeTemplateValue sanitizes a single template data value according to its type,
+// treating string values whose key looks like a URL field as URLs to validate
+func sanitizeTemplateValue(key string, value interface{}, config *TrustedDomainConfig) (interface{}, error) {
+	switch v := value.(type) {
+	case string:
+		if isTemplateURLField(key) {
+			// Validate and sanitize URL
+			sanitizedURL, err := SanitizeURL(v, config)
+			if err != nil {
+				return nil, fmt.Errorf("invalid URL in field '%s': %w", key, err)
+			}
+			return sanitizedURL, nil
+		}
+		// For non-URL strings, HTML escape to prevent XSS
+		return html.EscapeString(v), nil
+	case int, int64, float64, bool:
+		// Numeric and boolean types are safe
+		return v, nil
+	case map[string]interface{}:
+		// Recursively sanitize nested maps
+		nestedSanitized, err := SanitizeTemplateData(v, config)
+		if err != nil {
+			return nil, fmt.Errorf("error sanitizing nested field '%s': %w", key, err)
+		}
+		return nestedSanitized, nil
+	default:
+		// For other types, convert to string and escape
+		return html.EscapeString(fmt.Sprintf("%v", v)), nil
+	}
+}
+
+// isTemplateURLField checks if this is a URL field based on its key
+func isTemplateURLField(key string) bool {
+	keyLower := strings.ToLower(key)
+	for _, urlKey := range templateURLFieldKeys {
+		if strings.Contains(keyLower, urlKey) {
+			return true
+		}
+	}
+	return false
 }
 
 // ValidateAndSanitizeHostHeader validates a host header to prevent host header injection
