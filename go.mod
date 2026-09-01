@@ -1,6 +1,6 @@
 module github.com/aptlogica/sereni-email-smtp
 
-go 1.26.2
+go 1.26.5
 
 require (
 	github.com/gin-gonic/gin v1.12.0
