@@ -56,7 +56,7 @@ func TestSendEmail_BadJSON(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	// Provide invalid JSON body
@@ -73,7 +73,7 @@ func TestSendBulkEmail_WithInvalidEmails(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	body := email.BulkEmailRequest{Recipients: []string{"a@b.com", "bad"}, Subject: "s", Body: "b"}
@@ -100,7 +100,7 @@ func TestGenerateOTPAndVerify(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	// Generate OTP with valid JSON
@@ -164,7 +164,9 @@ func TestSendEmail_TemplateCausesServerError(t *testing.T) {
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
 	// Make SendEmail return error so SendTransactionalEmail returns error
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return errors.New("send failed") }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
+		return errors.New("send failed")
+	}
 	h := handlers.NewEmailHandler(es)
 
 	// Provide valid JSON with subject/body so binding succeeds and SendTransactionalEmail calls SendEmail
@@ -184,7 +186,7 @@ func TestSendBulkEmail_BadJSONReturns400(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	req := httptest.NewRequest("POST", "/", bytes.NewBufferString("{badjson"))
@@ -200,7 +202,7 @@ func TestGenerateOTP_DefaultExpiry(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	// Omit expiry to rely on default
@@ -220,7 +222,7 @@ func TestVerifyOTP_Unauthorized(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	// Verify with a non-existent OTP
@@ -247,7 +249,7 @@ func TestSendBulkEmail_AllSuccess(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	body := email.BulkEmailRequest{Recipients: []string{"a@b.com", "c@d.com"}, Subject: "s", Body: "b"}
@@ -276,7 +278,7 @@ func TestSendEmail_SuccessResponseBody(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	tr := email.EmailRequest{To: []string{"a@b.com"}, Subject: "s", Body: "b"}
@@ -302,7 +304,7 @@ func TestSendEmail_InvalidRecipientReturns400(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	tr := email.EmailRequest{To: []string{"not-an-email"}, Subject: "s", Body: "b"}
@@ -328,7 +330,7 @@ func TestGenerateOTP_InvalidRecipientReturns400(t *testing.T) {
 	recorder := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(recorder)
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	h := handlers.NewEmailHandler(es)
 
 	reqBody := map[string]interface{}{"to": "not-an-email"}

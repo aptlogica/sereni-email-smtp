@@ -42,6 +42,7 @@ func main() {
 		"Test Email from Sereni SMTP",
 		"Hello! This is a test email sent using Sereni Email SMTP provider.",
 		false,
+		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to send text email: %v", err)
@@ -84,6 +85,7 @@ func main() {
 		"HTML Email from Sereni SMTP",
 		htmlBody,
 		true,
+		nil,
 	)
 	if err != nil {
 		log.Printf("Failed to send HTML email: %v", err)

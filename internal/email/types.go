@@ -12,6 +12,18 @@ type EmailRequest struct {
 	IsHTML       bool                   `json:"is_html"`
 	Template     string                 `json:"template"`
 	TemplateData map[string]interface{} `json:"template_data"`
+	Attachments  []Attachment           `json:"attachments,omitempty"`
+}
+
+// Attachment is one file attached to a transactional email. Content travels
+// as base64 (rather than a storage reference) so this service - which has no
+// credentials or client for storage-provider - never needs to fetch bytes
+// itself; the caller (e.g. trigger-processor) resolves the reference and
+// reads the file before building the request.
+type Attachment struct {
+	Filename      string `json:"filename" binding:"required"`
+	ContentType   string `json:"content_type,omitempty"`
+	ContentBase64 string `json:"content_base64" binding:"required"`
 }
 
 type BulkEmailRequest struct {

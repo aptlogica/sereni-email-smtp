@@ -216,7 +216,7 @@ func TestSendTemplateEmail_Success(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	sendCalled := false
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		sendCalled = true
 		return nil
 	}
@@ -259,7 +259,7 @@ func TestSendTemplateEmail_TemplateNotFound(t *testing.T) {
 func TestSendTemplateEmail_SendError(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return &EmailSendError{Message: "SMTP connection failed"}
 	}
 

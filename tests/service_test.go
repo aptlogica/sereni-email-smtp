@@ -90,7 +90,7 @@ func TestSendEmail_StartTLSError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for StartTLS failure, got nil")
 	}
@@ -115,7 +115,7 @@ func TestSendEmail_AuthError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Auth failure, got nil")
 	}
@@ -136,7 +136,7 @@ func TestSendEmail_MailError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Mail failure, got nil")
 	}
@@ -154,7 +154,7 @@ func TestSendEmail_RcptError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Rcpt failure, got nil")
 	}
@@ -172,7 +172,7 @@ func TestSendEmail_DataError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Data failure, got nil")
 	}
@@ -194,7 +194,7 @@ func TestSendEmail_WriteError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Write failure, got nil")
 	}
@@ -216,7 +216,7 @@ func TestSendEmail_DataWriterCloseError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for DataWriter close failure, got nil")
 	}
@@ -237,7 +237,7 @@ func TestSendEmail_QuitError(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Quit failure, got nil")
 	}
@@ -251,7 +251,7 @@ func TestSendEmail_DialError(t *testing.T) {
 		return nil, errors.New("dial failed")
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for Dial failure, got nil")
 	}
@@ -275,7 +275,7 @@ func TestSendEmail_HTMLMessage(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "<html>Body</html>", true)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "<html>Body</html>", true, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -306,7 +306,7 @@ func TestSendEmail_SanitizationCRLF(t *testing.T) {
 	// Try to inject CRLF in subject - the sanitization should remove the CRLF
 	// so it becomes part of the same line
 	maliciousSubject := "Subject\r\nX-Injected: header"
-	err := service.SendEmail([]string{"test@example.com"}, maliciousSubject, "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, maliciousSubject, "Body", false, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -332,7 +332,7 @@ func TestSendEmail_FromAddressWithDisplayName(t *testing.T) {
 		return mockClient, nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -374,7 +374,7 @@ func TestSendEmail_MultipleRecipients(t *testing.T) {
 	}
 
 	recipients := []string{"test1@example.com", "test2@example.com", "test3@example.com"}
-	err := service.SendEmail(recipients, "Subject", "Body", false)
+	err := service.SendEmail(recipients, "Subject", "Body", false, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -386,7 +386,7 @@ func TestSendEmail_MultipleRecipients(t *testing.T) {
 func TestSendBulkEmail_InvalidEmails(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 2)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -420,7 +420,7 @@ func TestSendBulkEmail_DefaultBatchSize(t *testing.T) {
 
 	var mu sync.Mutex
 	sendCount := 0
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		mu.Lock()
 		sendCount++
 		mu.Unlock()
@@ -449,7 +449,7 @@ func TestSendBulkEmail_PartialFailures(t *testing.T) {
 
 	var mu sync.Mutex
 	sendCount := 0
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		mu.Lock()
 		sendCount++
 		currentCount := sendCount
@@ -476,7 +476,7 @@ func TestSendBulkEmail_PartialFailures(t *testing.T) {
 func TestVerifyOTP_Expired(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -499,7 +499,7 @@ func TestVerifyOTP_Expired(t *testing.T) {
 func TestVerifyOTP_DeletesAfterVerification(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -524,7 +524,7 @@ func TestGenerateAndSendOTP_InvalidEmail(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	sentinelErr := errors.New("invalid email address")
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil // Won't be called due to validation
 	}
 
@@ -561,7 +561,7 @@ func TestSendTransactionalEmail_WithTemplate(t *testing.T) {
 	sendCalled := false
 	var capturedSubject string
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		sendCalled = true
 		capturedSubject = subject
 		return nil
@@ -637,7 +637,7 @@ func TestSendTemplateEmail(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	sendCalled := false
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		sendCalled = true
 		if subject != "Your Verification Code" {
 			t.Errorf("Expected subject 'Your Verification Code', got %s", subject)
@@ -692,7 +692,7 @@ func TestGetAvailableTemplates(t *testing.T) {
 func TestCleanupExpiredOTPs(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 

@@ -129,7 +129,7 @@ func (es *EmailService) RenderTemplate(templateName string, data map[string]inte
 	es.mutex.RLock()
 	trustedConfig := es.TrustedDomainConfig
 	es.mutex.RUnlock()
-	
+
 	sanitizedData, err := SanitizeTemplateData(data, trustedConfig)
 	if err != nil {
 		return "", "", fmt.Errorf("template data validation failed: %w", err)
@@ -186,7 +186,7 @@ func (es *EmailService) SendTemplateEmail(to []string, templateName string, temp
 		return fmt.Errorf("failed to render template: %w", err)
 	}
 
-	return es.SendEmail(to, subject, htmlBody, true)
+	return es.SendEmail(to, subject, htmlBody, true, nil)
 }
 
 // GetAvailableTemplates returns a list of available template names
