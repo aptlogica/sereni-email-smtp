@@ -285,7 +285,28 @@ const base64LineLength = 76
 // email too, so it's a correct, well-tested way to assemble one here.
 func buildMultipartEmailMessage(isHTML bool, from string, to []string, subject, body string, attachments []Attachment) (string, error) {
 	var buf strings.Builder
-	mw := multipart.NewWriter(&buf)
+	boundary, err := writeMultipartBody(&buf, isHTML, body, attachments)
+	if err != nil {
+		return "", err
+	}
+
+	headers := fmt.Sprintf(
+		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%q\r\n\r\n",
+		from,
+		Join(to, ", "),
+		subject,
+		boundary,
+	)
+	return headers + buf.String(), nil
+}
+
+// writeMultipartBody writes the body part and attachment parts of a
+// multipart/mixed message to w and returns the boundary it used. Split out
+// of buildMultipartEmailMessage so the underlying writer can be swapped for
+// one that fails, letting tests exercise mw.CreatePart/Write/Close errors
+// that a real strings.Builder never produces.
+func writeMultipartBody(w io.Writer, isHTML bool, body string, attachments []Attachment) (string, error) {
+	mw := multipart.NewWriter(w)
 
 	bodyContentType := "text/plain; charset=UTF-8"
 	if isHTML {
@@ -311,14 +332,7 @@ func buildMultipartEmailMessage(isHTML bool, from string, to []string, subject, 
 		return "", fmt.Errorf("close multipart message: %w", err)
 	}
 
-	headers := fmt.Sprintf(
-		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%q\r\n\r\n",
-		from,
-		Join(to, ", "),
-		subject,
-		mw.Boundary(),
-	)
-	return headers + buf.String(), nil
+	return mw.Boundary(), nil
 }
 
 // writeAttachmentPart decodes an attachment's base64 content (validating it
