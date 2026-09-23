@@ -115,7 +115,7 @@ func TestSendEmail_Comprehensive(t *testing.T) {
 	var lastSubject, lastBody string
 	var lastIsHTML bool
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		lastTo = to
 		lastSubject = subject
 		lastBody = body
@@ -123,7 +123,7 @@ func TestSendEmail_Comprehensive(t *testing.T) {
 		return nil
 	}
 
-	err := service.SendEmail([]string{"test@example.com"}, "Test Subject", "Test Body", true)
+	err := service.SendEmail([]string{"test@example.com"}, "Test Subject", "Test Body", true, nil)
 	if err != nil {
 		t.Errorf("Expected no error, got %v", err)
 	}
@@ -142,11 +142,11 @@ func TestSendEmail_Comprehensive(t *testing.T) {
 	}
 
 	// Test with SendEmailFunc returning error
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return errors.New("send failed")
 	}
 
-	err = service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false)
+	err = service.SendEmail([]string{"test@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -194,7 +194,7 @@ func TestSendBulkEmail_Comprehensive(t *testing.T) {
 func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -208,7 +208,7 @@ func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 	}
 
 	// Test with send email error
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return errors.New("email send failed")
 	}
 
@@ -219,7 +219,7 @@ func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 
 	// Test with invalid email
 	sentinelErr := errors.New("invalid email address")
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil // Won't be called due to validation
 	}
 
@@ -234,7 +234,7 @@ func TestGenerateAndSendOTP_Comprehensive(t *testing.T) {
 
 func TestVerifyOTP_Comprehensive(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -264,7 +264,7 @@ func TestSendTransactionalEmail_Comprehensive(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var lastSubject string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		lastSubject = subject
 		return nil
 	}

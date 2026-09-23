@@ -91,7 +91,7 @@ func TestEmailInjection_HeaderInjectionPrevention(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var capturedMessage string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		// Capture what would be sent
 		capturedMessage = subject + "|" + strings.Join(to, ",") + "|" + body
 		return nil
@@ -99,7 +99,7 @@ func TestEmailInjection_HeaderInjectionPrevention(t *testing.T) {
 
 	// Test CRLF injection in subject
 	maliciousSubject := "Test\r\nBcc: attacker@evil.com"
-	err := service.SendEmail([]string{"victim@example.com"}, maliciousSubject, "Body", false)
+	err := service.SendEmail([]string{"victim@example.com"}, maliciousSubject, "Body", false, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
@@ -110,7 +110,7 @@ func TestEmailInjection_HeaderInjectionPrevention(t *testing.T) {
 
 	// Test CRLF injection in recipient
 	maliciousRecipient := "victim@example.com\r\nBcc: attacker@evil.com"
-	err = service.SendEmail([]string{maliciousRecipient}, "Subject", "Body", false)
+	err = service.SendEmail([]string{maliciousRecipient}, "Subject", "Body", false, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
@@ -129,14 +129,14 @@ func TestEmailInjection_BodyControlCharactersPrevention(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var capturedBody string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		capturedBody = body
 		return nil
 	}
 
 	// Test CRLF and null bytes in body
 	maliciousBody := "Click here: http://legit.com\r\n\r\nBcc: attacker@evil.com\r\nContent-Type: text/html\r\n\r\n<script>alert('xss')</script>\x00"
-	err := service.SendEmail([]string{"victim@example.com"}, "Subject", maliciousBody, false)
+	err := service.SendEmail([]string{"victim@example.com"}, "Subject", maliciousBody, false, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
@@ -155,13 +155,13 @@ func TestEmailInjection_HTMLBodyXSSPrevention(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var capturedBody string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		capturedBody = body
 		return nil
 	}
 
 	maliciousHTMLBody := "<p>Hello</p><img src='x' onerror='alert(1)'><script>alert('xss')</script>"
-	err := service.SendEmail([]string{"victim@example.com"}, "Subject", maliciousHTMLBody, true)
+	err := service.SendEmail([]string{"victim@example.com"}, "Subject", maliciousHTMLBody, true, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestEmailInjection_FromEmailSanitization(t *testing.T) {
 		}, nil
 	}
 
-	err := service.SendEmail([]string{"victim@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"victim@example.com"}, "Subject", "Body", false, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}
@@ -217,7 +217,7 @@ func TestEmailInjection_EmptyFromEmailAfterSanitization(t *testing.T) {
 		return &mockSmtpClient{}, nil
 	}
 
-	err := service.SendEmail([]string{"victim@example.com"}, "Subject", "Body", false)
+	err := service.SendEmail([]string{"victim@example.com"}, "Subject", "Body", false, nil)
 	if err == nil {
 		t.Error("Expected error for empty sender after sanitization, got nil")
 	}
@@ -230,7 +230,7 @@ func TestEmailInjection_EmptyFromEmailAfterSanitization(t *testing.T) {
 func TestEmailInjection_TransactionalEmailValidation(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -262,7 +262,7 @@ func TestEmailInjection_TransactionalEmailSanitization(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var capturedSubject, capturedBody string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		capturedSubject = subject
 		capturedBody = body
 		return nil
@@ -295,7 +295,7 @@ func TestEmailInjection_TransactionalEmailSanitization(t *testing.T) {
 func TestEmailInjection_GenerateAndSendOTPValidation(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 
@@ -320,7 +320,7 @@ func TestEmailInjection_MultipleRecipientsValidation(t *testing.T) {
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
 
 	var capturedRecipients []string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		capturedRecipients = to
 		return nil
 	}
@@ -332,7 +332,7 @@ func TestEmailInjection_MultipleRecipientsValidation(t *testing.T) {
 		"valid3@example.com",
 	}
 
-	err := service.SendEmail(recipients, "Subject", "Body", false)
+	err := service.SendEmail(recipients, "Subject", "Body", false, nil)
 	if err != nil {
 		t.Fatalf("SendEmail failed: %v", err)
 	}

@@ -94,7 +94,7 @@ func TestSendTemplateEmail_Comprehensive(t *testing.T) {
 
 	var lastTo []string
 	var lastSubject, lastBody string
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		lastTo = to
 		lastSubject = subject
 		lastBody = body
@@ -128,7 +128,7 @@ func TestSendTemplateEmail_Comprehensive(t *testing.T) {
 	}
 
 	// Test with send error
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return errors.New("send failed")
 	}
 
