@@ -32,7 +32,7 @@ func TestEmailHandler_SendEmail_Comprehensive(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 	handler := handlers.NewEmailHandler(service)
@@ -70,7 +70,7 @@ func TestEmailHandler_SendEmail_Comprehensive(t *testing.T) {
 	}
 
 	// Test service error
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return errors.New("service error")
 	}
 
@@ -169,7 +169,7 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	// Test successful OTP generation
 	{
 		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 			return nil
 		}
 		handler := handlers.NewEmailHandler(service)
@@ -195,7 +195,7 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	// Test with default expiry (missing expiry field)
 	{
 		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 			return nil
 		}
 		handler := handlers.NewEmailHandler(service)
@@ -220,7 +220,7 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	// Test invalid JSON
 	{
 		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 			return nil
 		}
 		handler := handlers.NewEmailHandler(service)
@@ -240,7 +240,7 @@ func TestEmailHandler_GenerateOTP_Comprehensive(t *testing.T) {
 	// Test service error still returns 200 (async send)
 	{
 		service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+		service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 			return errors.New("otp service error")
 		}
 		handler := handlers.NewEmailHandler(service)
@@ -267,7 +267,7 @@ func TestEmailHandler_VerifyOTP_Comprehensive(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	service := email.NewEmailService("localhost", 587, "user", "pass", "from@test.com", 5)
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		return nil
 	}
 	handler := handlers.NewEmailHandler(service)

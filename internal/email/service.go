@@ -7,11 +7,14 @@ package email
 
 import (
 	"crypto/tls"
+	"encoding/base64"
 	"fmt"
 	"html"
 	"io"
+	"mime/multipart"
 	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"regexp"
 	"strings"
 	"sync"
@@ -56,7 +59,7 @@ func sanitizeBody(input string) string {
 // proceed if any header field still contains a control character (e.g. CR/LF, which
 // would allow injecting extra headers or SMTP commands) or the body still contains
 // any control character other than the newlines it is intentionally allowed to carry.
-func verifySanitizedForSMTP(from string, to []string, subject, body string) error {
+func verifySanitizedForSMTP(from string, to []string, subject, body string, attachments []Attachment) error {
 	if headerInjectionPattern.MatchString(from) {
 		return fmt.Errorf("sanitization check failed: sender contains illegal control characters")
 	}
@@ -71,7 +74,36 @@ func verifySanitizedForSMTP(from string, to []string, subject, body string) erro
 	if bodyControlCharsPattern.MatchString(body) {
 		return fmt.Errorf("sanitization check failed: body contains illegal control characters")
 	}
+	for _, att := range attachments {
+		if headerInjectionPattern.MatchString(att.Filename) || headerInjectionPattern.MatchString(att.ContentType) {
+			return fmt.Errorf("sanitization check failed: attachment metadata contains illegal control characters")
+		}
+	}
 	return nil
+}
+
+// sanitizeAttachments strips header-injection characters from each
+// attachment's Filename/ContentType before they can reach a MIME part
+// header - the same treatment sanitizeHeader gives Subject/From/To.
+// ContentBase64 is left untouched here; buildMultipartEmailMessage validates
+// it decodes cleanly when the message is assembled.
+func sanitizeAttachments(attachments []Attachment) []Attachment {
+	if len(attachments) == 0 {
+		return nil
+	}
+	sanitized := make([]Attachment, len(attachments))
+	for i, att := range attachments {
+		filename := sanitizeHeader(att.Filename)
+		if filename == "" {
+			filename = "attachment"
+		}
+		sanitized[i] = Attachment{
+			Filename:      filename,
+			ContentType:   sanitizeHeader(att.ContentType),
+			ContentBase64: att.ContentBase64,
+		}
+	}
+	return sanitized
 }
 
 // EmailService provides methods for sending emails and managing OTPs.
@@ -87,7 +119,7 @@ type EmailService struct {
 	// TrustedDomainConfig for URL validation in templates
 	TrustedDomainConfig *TrustedDomainConfig
 	// SendEmailFunc, if set, will be used instead of the real SMTP send flow.
-	SendEmailFunc func(to []string, subject, body string, isHTML bool) error
+	SendEmailFunc func(to []string, subject, body string, isHTML bool, attachments []Attachment) error
 	// SendBulkEmailFunc allows overriding bulk send behavior in tests.
 	SendBulkEmailFunc func(recipients []string, subject, body string, isHTML bool) ([]string, error)
 	// Dial allows injecting a dialer for smtp clients (used in tests).
@@ -137,29 +169,33 @@ func (es *EmailService) SetTrustedDomains(domains []string, allowHTTP bool) {
 	}
 }
 
-func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool) error {
+func (es *EmailService) SendEmail(to []string, subject, body string, isHTML bool, attachments []Attachment) error {
 	// Sanitize inputs to prevent header injection - ALWAYS do this first
 	sanitizedTo, sanitizedSubject, sanitizedBody, sanitizedFrom, err := prepareSanitizedEmail(es.FromEmail, to, subject, body, isHTML)
 	if err != nil {
 		return err
 	}
+	sanitizedAttachments := sanitizeAttachments(attachments)
 
 	// SECURITY: fail closed if sanitization somehow left unsafe control characters
 	// in place. This is a hard gate immediately before the SMTP message is built,
 	// not just a best-effort cleanup, so no unsanitized content can reach the wire.
-	if err := verifySanitizedForSMTP(sanitizedFrom, sanitizedTo, sanitizedSubject, sanitizedBody); err != nil {
+	if err := verifySanitizedForSMTP(sanitizedFrom, sanitizedTo, sanitizedSubject, sanitizedBody, sanitizedAttachments); err != nil {
 		return err
 	}
 
 	// If a SendEmailFunc is provided (tests), use it with sanitized inputs
 	if es.SendEmailFunc != nil {
-		return es.SendEmailFunc(sanitizedTo, sanitizedSubject, sanitizedBody, isHTML)
+		return es.SendEmailFunc(sanitizedTo, sanitizedSubject, sanitizedBody, isHTML, sanitizedAttachments)
 	}
 
 	auth := smtp.PlainAuth("", es.SMTPUsername, es.SMTPPassword, es.SMTPHost)
 
 	// Set up the message
-	message := buildEmailMessage(isHTML, sanitizedFrom, sanitizedTo, sanitizedSubject, sanitizedBody)
+	message, err := buildEmailMessage(isHTML, sanitizedFrom, sanitizedTo, sanitizedSubject, sanitizedBody, sanitizedAttachments)
+	if err != nil {
+		return err
+	}
 
 	// Connect to server
 	// Use injected Dial for testability
@@ -206,8 +242,19 @@ func prepareSanitizedEmail(fromEmail string, to []string, subject, body string, 
 	return sanitizedTo, sanitizedSubject, sanitizedBody, sanitizedFrom, err
 }
 
-// buildEmailMessage constructs the raw SMTP message for either an HTML or plain text email.
-func buildEmailMessage(isHTML bool, from string, to []string, subject, body string) string {
+// buildEmailMessage constructs the raw SMTP message for either an HTML or
+// plain text email. With no attachments this is the original flat message
+// (unchanged, so every existing non-attachment send path - bulk, templates,
+// OTP - keeps its exact wire format); attachments switch to a MIME
+// multipart/mixed envelope built by buildMultipartEmailMessage.
+func buildEmailMessage(isHTML bool, from string, to []string, subject, body string, attachments []Attachment) (string, error) {
+	if len(attachments) == 0 {
+		return buildSimpleEmailMessage(isHTML, from, to, subject, body), nil
+	}
+	return buildMultipartEmailMessage(isHTML, from, to, subject, body, attachments)
+}
+
+func buildSimpleEmailMessage(isHTML bool, from string, to []string, subject, body string) string {
 	if isHTML {
 		return fmt.Sprintf(
 			"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n%s",
@@ -224,6 +271,116 @@ func buildEmailMessage(isHTML bool, from string, to []string, subject, body stri
 		subject,
 		body,
 	)
+}
+
+// base64LineLength is the classic MIME line-wrap width (RFC 2045 caps a
+// body line at 76 characters for base64-encoded content).
+const base64LineLength = 76
+
+// buildMultipartEmailMessage builds a multipart/mixed message: one part for
+// the HTML/plain body, one base64-encoded part per attachment. Uses
+// mime/multipart.Writer for the part/boundary mechanics - it is normally
+// reached for HTTP request bodies, but it writes exactly the
+// "--boundary\r\nheaders\r\n\r\nbody\r\n" wire format RFC 2046 defines for
+// email too, so it's a correct, well-tested way to assemble one here.
+func buildMultipartEmailMessage(isHTML bool, from string, to []string, subject, body string, attachments []Attachment) (string, error) {
+	var buf strings.Builder
+	boundary, err := writeMultipartBody(&buf, isHTML, body, attachments)
+	if err != nil {
+		return "", err
+	}
+
+	headers := fmt.Sprintf(
+		"From: %s\r\nTo: %s\r\nSubject: %s\r\nMIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=%q\r\n\r\n",
+		from,
+		Join(to, ", "),
+		subject,
+		boundary,
+	)
+	return headers + buf.String(), nil
+}
+
+// writeMultipartBody writes the body part and attachment parts of a
+// multipart/mixed message to w and returns the boundary it used. Split out
+// of buildMultipartEmailMessage so the underlying writer can be swapped for
+// one that fails, letting tests exercise mw.CreatePart/Write/Close errors
+// that a real strings.Builder never produces.
+func writeMultipartBody(w io.Writer, isHTML bool, body string, attachments []Attachment) (string, error) {
+	mw := multipart.NewWriter(w)
+
+	bodyContentType := "text/plain; charset=UTF-8"
+	if isHTML {
+		bodyContentType = "text/html; charset=UTF-8"
+	}
+	bodyHeader := textproto.MIMEHeader{}
+	bodyHeader.Set("Content-Type", bodyContentType)
+	bodyPart, err := mw.CreatePart(bodyHeader)
+	if err != nil {
+		return "", fmt.Errorf("create message body part: %w", err)
+	}
+	if _, err := bodyPart.Write([]byte(body)); err != nil {
+		return "", fmt.Errorf("write message body part: %w", err)
+	}
+
+	for _, att := range attachments {
+		if err := writeAttachmentPart(mw, att); err != nil {
+			return "", err
+		}
+	}
+
+	if err := mw.Close(); err != nil {
+		return "", fmt.Errorf("close multipart message: %w", err)
+	}
+
+	return mw.Boundary(), nil
+}
+
+// writeAttachmentPart decodes an attachment's base64 content (validating it
+// up front, since a bad ContentBase64 would otherwise silently truncate the
+// part) and re-encodes it into the part, line-wrapped as RFC 2045 requires.
+func writeAttachmentPart(mw *multipart.Writer, att Attachment) error {
+	decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(att.ContentBase64))
+	if err != nil {
+		return fmt.Errorf("attachment %q: invalid base64 content: %w", att.Filename, err)
+	}
+
+	contentType := att.ContentType
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	// A quote inside the filename would break the quoted-string the header
+	// value is wrapped in; sanitizeAttachments already stripped control
+	// characters (the injection risk), so only the quote itself is left to
+	// neutralize for well-formed output.
+	quotedFilename := strings.ReplaceAll(att.Filename, `"`, "'")
+
+	header := textproto.MIMEHeader{}
+	header.Set("Content-Type", contentType)
+	header.Set("Content-Transfer-Encoding", "base64")
+	header.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, quotedFilename))
+
+	part, err := mw.CreatePart(header)
+	if err != nil {
+		return fmt.Errorf("attachment %q: create part: %w", att.Filename, err)
+	}
+	if err := writeBase64Lines(part, decoded); err != nil {
+		return fmt.Errorf("attachment %q: write content: %w", att.Filename, err)
+	}
+	return nil
+}
+
+// writeBase64Lines writes data as standard base64, wrapped at
+// base64LineLength characters per line - most MTAs tolerate an unwrapped
+// line, but wrapping is what the MIME spec actually requires.
+func writeBase64Lines(w io.Writer, data []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for i := 0; i < len(encoded); i += base64LineLength {
+		end := min(i+base64LineLength, len(encoded))
+		if _, err := w.Write([]byte(encoded[i:end] + "\r\n")); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // deliverViaSMTP authenticates and transmits the message over an already-connected SMTP client.
@@ -308,7 +465,7 @@ func (es *EmailService) SendBulkEmail(recipients []string, subject, body string,
 			semaphore <- struct{}{}        // Acquire semaphore
 			defer func() { <-semaphore }() // Release semaphore
 
-			err := es.SendEmail([]string{email}, subject, body, isHTML)
+			err := es.SendEmail([]string{email}, subject, body, isHTML, nil)
 			if err != nil {
 				mu.Lock()
 				failedEmails = append(failedEmails, email)
@@ -394,7 +551,7 @@ func (es *EmailService) SendTransactionalEmail(request *EmailRequest) error {
 	sanitizedSubject := sanitizeHeader(subject)
 	sanitizedBody := sanitizeBody(body)
 
-	return es.SendEmail(request.To, sanitizedSubject, sanitizedBody, request.IsHTML)
+	return es.SendEmail(request.To, sanitizedSubject, sanitizedBody, request.IsHTML, request.Attachments)
 }
 
 func (es *EmailService) cleanupExpiredOTPs() {

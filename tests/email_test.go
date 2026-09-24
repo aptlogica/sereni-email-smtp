@@ -68,7 +68,7 @@ func TestSendTemplateEmailAndTransactional(t *testing.T) {
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
 	var lastTo []string
 	var lastSubject string
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		lastTo = to
 		lastSubject = subject
 		return nil
@@ -90,7 +90,7 @@ func TestSendTemplateEmailAndTransactional(t *testing.T) {
 
 func TestOTPStoreAndCleanup(t *testing.T) {
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error { return nil }
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error { return nil }
 	otp, err := es.GenerateAndSendOTP("u@x", 0) // expiry 0 -> immediate expiry
 	if err != nil {
 		t.Fatalf("generate otp failed: %v", err)
@@ -151,63 +151,63 @@ func TestSendEmail_DialAndClientErrors(t *testing.T) {
 
 	// Dial error
 	es.Dial = func(addr string) (email.SmtpClient, error) { return nil, errors.New("dial fail") }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected dial error")
 	}
 
 	// StartTLS error
 	mock := &mockClient{startTLSErr: errors.New("tls fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected tls error")
 	}
 
 	// Auth error
 	mock = &mockClient{authErr: errors.New("auth fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected auth error")
 	}
 
 	// Mail error
 	mock = &mockClient{mailErr: errors.New("mail fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected mail error")
 	}
 
 	// Rcpt error
 	mock = &mockClient{rcptErr: errors.New("rcpt fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected rcpt error")
 	}
 
 	// Data write error
 	mock = &mockClient{writeErr: errors.New("write fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected write error")
 	}
 
 	// Data() error
 	mock = &mockClient{dataErr: errors.New("data fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected data error")
 	}
 
 	// writer Close error
 	mock = &mockClient{closeErr: errors.New("close fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected writer close error")
 	}
 
 	// Quit error
 	mock = &mockClient{quitErr: errors.New("quit fail")}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err == nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err == nil {
 		t.Fatalf("expected quit error")
 	}
 
@@ -215,7 +215,7 @@ func TestSendEmail_DialAndClientErrors(t *testing.T) {
 	mock = &mockClient{}
 	es.Dial = func(addr string) (email.SmtpClient, error) { return mock, nil }
 	es.FromEmail = "from@x"
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "body", true); err != nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "body", true, nil); err != nil {
 		t.Fatalf("unexpected send error: %v", err)
 	}
 }
@@ -236,7 +236,7 @@ func TestRenderTemplate_NotFoundAndSendTemplateError(t *testing.T) {
 func TestSendBulkEmail_FailuresAggregated(t *testing.T) {
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 2)
 	// Fail send for a specific address via SendEmailFunc
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		if len(to) > 0 && to[0] == "fail@x" {
 			return errors.New("send failed")
 		}
@@ -264,7 +264,7 @@ func TestSendBulkEmail_FailuresAggregated(t *testing.T) {
 func TestSendTransactionalEmail_SuccessAndTemplateFlow(t *testing.T) {
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
 	called := false
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		called = true
 		return nil
 	}
@@ -285,14 +285,14 @@ func TestJoinAndAvailableTemplatesAndPlainSend(t *testing.T) {
 	es := email.NewEmailService("h", 25, "u", "p", "from@x", 5)
 	// non-HTML send path via SendEmailFunc
 	called := false
-	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	es.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		if isHTML {
 			t.Fatalf("expected plain text send")
 		}
 		called = true
 		return nil
 	}
-	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false); err != nil {
+	if err := es.SendEmail([]string{"a@b.com"}, "s", "b", false, nil); err != nil {
 		t.Fatalf("send failed: %v", err)
 	}
 	if !called {

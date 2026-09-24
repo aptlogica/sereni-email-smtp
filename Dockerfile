@@ -1,6 +1,6 @@
 
 ## docker/Dockerfile
-FROM golang:1.26.5-alpine3.24@sha256:111d79159b2326f7e80c4a4706e1ba166acb0e2611df853955f3621828cd49e8 AS builder
+FROM golang:1.27.1-alpine3.24@sha256:cf6fca6641884b8433441b2b0652976f975e1d0fdd26d177eaaf8596087f3125 AS builder
 RUN go version
 
 # Install git (required for go modules)
@@ -34,7 +34,7 @@ RUN cp /go/bin/swag /app/swag
 
 
 # Final stage
-FROM alpine:3.20@sha256:a4f4213abb84c497377b8544c81b3564f313746700372ec4fe84653e4fb03805
+FROM alpine:3.24@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b
 
 # Install ca-certificates for HTTPS
 RUN apk --no-cache add ca-certificates

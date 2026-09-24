@@ -435,7 +435,7 @@ func TestEmailServiceWithSecureTemplates(t *testing.T) {
 	service.SetTrustedDomains([]string{"example.com"}, false)
 
 	// Mock the SendEmailFunc to prevent actual email sending
-	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool) error {
+	service.SendEmailFunc = func(to []string, subject, body string, isHTML bool, attachments []email.Attachment) error {
 		// Email sent successfully
 		return nil
 	}
