@@ -1,4 +1,16 @@
 definitions:
+  email.Attachment:
+    properties:
+      content_base64:
+        type: string
+      content_type:
+        type: string
+      filename:
+        type: string
+    required:
+    - content_base64
+    - filename
+    type: object
   email.BulkEmailRequest:
     properties:
       body:
@@ -23,6 +35,10 @@ definitions:
     type: object
   email.EmailRequest:
     properties:
+      attachments:
+        items:
+          $ref: '#/definitions/email.Attachment'
+        type: array
       body:
         type: string
       is_html:
@@ -73,7 +89,6 @@ definitions:
     - email
     - otp
     type: object
-host: localhost:8082
 info:
   contact:
     email: support@swagger.io
