@@ -244,6 +244,24 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "email.Attachment": {
+            "type": "object",
+            "required": [
+                "content_base64",
+                "filename"
+            ],
+            "properties": {
+                "content_base64": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                }
+            }
+        },
         "email.BulkEmailRequest": {
             "type": "object",
             "required": [
@@ -284,6 +302,12 @@ const docTemplate = `{
                 "to"
             ],
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/email.Attachment"
+                    }
+                },
                 "body": {
                     "type": "string"
                 },
@@ -360,7 +384,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8082",
+	Host:             "",
 	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "Serenibase Email Service API",
