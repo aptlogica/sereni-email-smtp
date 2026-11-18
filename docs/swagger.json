@@ -15,7 +15,6 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8082",
     "paths": {
         "/api/v1/email/otp/generate": {
             "post": {
@@ -237,6 +236,24 @@
         }
     },
     "definitions": {
+        "email.Attachment": {
+            "type": "object",
+            "required": [
+                "content_base64",
+                "filename"
+            ],
+            "properties": {
+                "content_base64": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                },
+                "filename": {
+                    "type": "string"
+                }
+            }
+        },
         "email.BulkEmailRequest": {
             "type": "object",
             "required": [
@@ -277,6 +294,12 @@
                 "to"
             ],
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/email.Attachment"
+                    }
+                },
                 "body": {
                     "type": "string"
                 },
